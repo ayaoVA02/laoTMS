@@ -19,12 +19,13 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Footer from "@/components/layout/footer";
+import Image from "next/image";
 
 function haversineDistance(
   lat1: number,
   lon1: number,
   lat2: number,
-  lon2: number
+  lon2: number,
 ): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -55,28 +56,29 @@ export default function TravelPlanDetailPage() {
 
   const plan = useMemo(
     () => plans.find((p) => p.id === params.id) ?? null,
-    [plans, params.id]
+    [plans, params.id],
   );
 
   const planAttractions = useMemo(
     () =>
       plan
-        ? plan.attractionIds
+        ? (plan.attractionIds
             .map((id) => getAttractionById(id))
-            .filter(Boolean) as Attraction[]
+            .filter(Boolean) as Attraction[])
         : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [plan]
+    [plan],
   );
 
   const availableAttractions = useMemo(
     () =>
       plan
         ? allAttractions.filter(
-            (a) => !plan.attractionIds.includes(a.id) && a.status === "approved"
+            (a) =>
+              !plan.attractionIds.includes(a.id) && a.status === "approved",
           )
         : [],
-    [plan, allAttractions]
+    [plan, allAttractions],
   );
 
   const totalDistance = useMemo(() => {
@@ -89,7 +91,7 @@ export default function TravelPlanDetailPage() {
         prev.coordinates[0],
         prev.coordinates[1],
         curr.coordinates[0],
-        curr.coordinates[1]
+        curr.coordinates[1],
       );
     }
     return Math.round(dist);
@@ -117,7 +119,7 @@ export default function TravelPlanDetailPage() {
     const startDate = new Date(start);
     const endDate = new Date(end);
     const diff = Math.ceil(
-      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
     );
     return Math.max(diff, 1);
   };
@@ -135,7 +137,7 @@ export default function TravelPlanDetailPage() {
           <p className="mt-2 text-sm text-gray-500">
             {t(
               "travelPlans.notFoundDesc",
-              "The travel plan you are looking for does not exist."
+              "The travel plan you are looking for does not exist.",
             )}
           </p>
           <Button
@@ -300,95 +302,134 @@ export default function TravelPlanDetailPage() {
                       preserveAspectRatio="xMidYMid meet"
                     >
                       {/* Connection Lines */}
-                      {planAttractions.length > 1 && (() => {
-                        const points = planAttractions.map((a, i) => {
-                          const x = 100 + (i / Math.max(planAttractions.length - 1, 1)) * 600;
-                          const y = 200 + Math.sin(i * 1.2) * 80;
-                          return { x, y, attraction: a };
-                        });
-                        const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
+                      {planAttractions.length > 1 &&
+                        (() => {
+                          const points = planAttractions.map((a, i) => {
+                            const x =
+                              100 +
+                              (i / Math.max(planAttractions.length - 1, 1)) *
+                                600;
+                            const y = 200 + Math.sin(i * 1.2) * 80;
+                            return { x, y, attraction: a };
+                          });
+                          const polylinePoints = points
+                            .map((p) => `${p.x},${p.y}`)
+                            .join(" ");
 
-                        return (
-                          <>
-                            {/* Dashed route line */}
-                            <polyline
-                              points={polylinePoints}
-                              fill="none"
-                              stroke="#14b8a6"
-                              strokeWidth="3"
-                              strokeDasharray="8,4"
-                              opacity="0.6"
-                            />
-                            {/* Solid route line on top */}
-                            <polyline
-                              points={polylinePoints}
-                              fill="none"
-                              stroke="#0d9488"
-                              strokeWidth="2.5"
-                              strokeLinejoin="round"
-                              strokeLinecap="round"
-                            />
-                            {/* Markers */}
-                            {points.map((p, i) => (
-                              <g key={i}>
-                                {/* Outer glow */}
-                                <circle
-                                  cx={p.x}
-                                  cy={p.y}
-                                  r="16"
-                                  fill="#14b8a6"
-                                  opacity="0.2"
-                                />
-                                {/* Inner circle */}
-                                <circle
-                                  cx={p.x}
-                                  cy={p.y}
-                                  r="10"
-                                  fill="white"
-                                  stroke="#0d9488"
-                                  strokeWidth="2.5"
-                                />
-                                {/* Number label */}
-                                <text
-                                  x={p.x}
-                                  y={p.y + 1}
-                                  textAnchor="middle"
-                                  dominantBaseline="central"
-                                  fontSize="11"
-                                  fontWeight="bold"
-                                  fill="#0d9488"
-                                >
-                                  {i + 1}
-                                </text>
-                                {/* Attraction name */}
-                                <text
-                                  x={p.x}
-                                  y={p.y + 26}
-                                  textAnchor="middle"
-                                  fontSize="10"
-                                  fill="#115e59"
-                                  fontWeight="500"
-                                >
-                                  {p.attraction.name.length > 14
-                                    ? p.attraction.name.slice(0, 14) + "..."
-                                    : p.attraction.name}
-                                </text>
-                              </g>
-                            ))}
-                          </>
-                        );
-                      })()}
-                      {planAttractions.length === 1 && (() => {
-                        const a = planAttractions[0];
-                        return (
-                          <g>
-                            <circle cx="400" cy="200" r="20" fill="#14b8a6" opacity="0.2" />
-                            <circle cx="400" cy="200" r="14" fill="white" stroke="#0d9488" strokeWidth="2.5" />
-                            <text x="400" y="201" textAnchor="middle" dominantBaseline="central" fontSize="12" fontWeight="bold" fill="#0d9488">1</text>
-                            <text x="400" y="234" textAnchor="middle" fontSize="11" fill="#115e59" fontWeight="500">{a.name}</text>
-                          </g>
-                        );
-                      })()}
+                          return (
+                            <>
+                              {/* Dashed route line */}
+                              <polyline
+                                points={polylinePoints}
+                                fill="none"
+                                stroke="#14b8a6"
+                                strokeWidth="3"
+                                strokeDasharray="8,4"
+                                opacity="0.6"
+                              />
+                              {/* Solid route line on top */}
+                              <polyline
+                                points={polylinePoints}
+                                fill="none"
+                                stroke="#0d9488"
+                                strokeWidth="2.5"
+                                strokeLinejoin="round"
+                                strokeLinecap="round"
+                              />
+                              {/* Markers */}
+                              {points.map((p, i) => (
+                                <g key={i}>
+                                  {/* Outer glow */}
+                                  <circle
+                                    cx={p.x}
+                                    cy={p.y}
+                                    r="16"
+                                    fill="#14b8a6"
+                                    opacity="0.2"
+                                  />
+                                  {/* Inner circle */}
+                                  <circle
+                                    cx={p.x}
+                                    cy={p.y}
+                                    r="10"
+                                    fill="white"
+                                    stroke="#0d9488"
+                                    strokeWidth="2.5"
+                                  />
+                                  {/* Number label */}
+                                  <text
+                                    x={p.x}
+                                    y={p.y + 1}
+                                    textAnchor="middle"
+                                    dominantBaseline="central"
+                                    fontSize="11"
+                                    fontWeight="bold"
+                                    fill="#0d9488"
+                                  >
+                                    {i + 1}
+                                  </text>
+                                  {/* Attraction name */}
+                                  <text
+                                    x={p.x}
+                                    y={p.y + 26}
+                                    textAnchor="middle"
+                                    fontSize="10"
+                                    fill="#115e59"
+                                    fontWeight="500"
+                                  >
+                                    {p.attraction.name.length > 14
+                                      ? p.attraction.name.slice(0, 14) + "..."
+                                      : p.attraction.name}
+                                  </text>
+                                </g>
+                              ))}
+                            </>
+                          );
+                        })()}
+                      {planAttractions.length === 1 &&
+                        (() => {
+                          const a = planAttractions[0];
+                          return (
+                            <g>
+                              <circle
+                                cx="400"
+                                cy="200"
+                                r="20"
+                                fill="#14b8a6"
+                                opacity="0.2"
+                              />
+                              <circle
+                                cx="400"
+                                cy="200"
+                                r="14"
+                                fill="white"
+                                stroke="#0d9488"
+                                strokeWidth="2.5"
+                              />
+                              <text
+                                x="400"
+                                y="201"
+                                textAnchor="middle"
+                                dominantBaseline="central"
+                                fontSize="12"
+                                fontWeight="bold"
+                                fill="#0d9488"
+                              >
+                                1
+                              </text>
+                              <text
+                                x="400"
+                                y="234"
+                                textAnchor="middle"
+                                fontSize="11"
+                                fill="#115e59"
+                                fontWeight="500"
+                              >
+                                {a.name}
+                              </text>
+                            </g>
+                          );
+                        })()}
                     </svg>
 
                     {/* Decorative compass icon */}
@@ -405,7 +446,7 @@ export default function TravelPlanDetailPage() {
                     <p className="text-xs text-teal-500 mt-1">
                       {t(
                         "travelPlans.addAttractionsToRoute",
-                        "Add attractions to see your route"
+                        "Add attractions to see your route",
                       )}
                     </p>
                   </div>
@@ -453,11 +494,12 @@ export default function TravelPlanDetailPage() {
                           {/* Attraction Card */}
                           <div className="flex-1 flex items-center gap-4 bg-gray-50 rounded-xl border border-gray-100 p-3 group hover:border-teal-200 hover:shadow-sm transition-all">
                             {/* Thumbnail */}
-                            <div className="shrink-0 h-16 w-16 sm:h-20 sm:w-20 rounded-lg overflow-hidden">
-                              <img
+                            <div className="relative shrink-0 h-16 w-16 sm:h-20 sm:w-20 rounded-lg overflow-hidden">
+                              <Image
                                 src={attraction.images[0]}
                                 alt={attraction.name}
-                                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-300"
                               />
                             </div>
 
@@ -484,9 +526,18 @@ export default function TravelPlanDetailPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() =>
-                                removeAttractionFromPlan(plan.id, attraction.id)
-                              }
+                              onClick={() => {
+                                const ok = window.confirm(
+                                  `Remove "${attraction.name}" from this travel plan?`,
+                                );
+
+                                if (ok) {
+                                  removeAttractionFromPlan(
+                                    plan.id,
+                                    attraction.id,
+                                  );
+                                }
+                              }}
                               className="shrink-0 text-gray-400 hover:text-red-500 hover:bg-red-50 h-8 w-8"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -502,13 +553,13 @@ export default function TravelPlanDetailPage() {
                     <p className="text-sm text-gray-600 font-medium">
                       {t(
                         "travelPlans.noAttractionsInPlan",
-                        "No attractions in this plan yet"
+                        "No attractions in this plan yet",
                       )}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
                       {t(
                         "travelPlans.addAttractionsBelow",
-                        "Add attractions from the list below"
+                        "Add attractions from the list below",
                       )}
                     </p>
                   </div>
@@ -531,7 +582,7 @@ export default function TravelPlanDetailPage() {
               <p className="text-xs text-gray-500 mb-5">
                 {t(
                   "travelPlans.availableAttractions",
-                  "Available attractions to add to your plan"
+                  "Available attractions to add to your plan",
                 )}
               </p>
 
@@ -544,11 +595,12 @@ export default function TravelPlanDetailPage() {
                       className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-teal-200 hover:bg-teal-50/30 transition-all cursor-pointer group"
                     >
                       {/* Thumbnail */}
-                      <div className="shrink-0 h-12 w-12 rounded-lg overflow-hidden">
-                        <img
+                      <div className="relative shrink-0 h-12 w-12 rounded-lg overflow-hidden">
+                        <Image
                           src={attraction.images[0]}
                           alt={attraction.name}
-                          className="h-full w-full object-cover"
+                          fill
+                          className="object-cover"
                         />
                       </div>
 
@@ -568,9 +620,15 @@ export default function TravelPlanDetailPage() {
                       {/* Add Button */}
                       <Button
                         size="icon"
-                        onClick={() =>
-                          addAttractionToPlan(plan.id, attraction.id)
-                        }
+                        onClick={() => {
+                          const ok = window.confirm(
+                            `Add "${attraction.name}" to this travel plan?`,
+                          );
+
+                          if (ok) {
+                            addAttractionToPlan(plan.id, attraction.id);
+                          }
+                        }}
                         className="shrink-0 h-8 w-8 bg-teal-600 hover:bg-teal-700 text-white shadow-sm"
                       >
                         <Plus className="h-4 w-4" />
@@ -586,7 +644,7 @@ export default function TravelPlanDetailPage() {
                   <p className="text-sm text-gray-500">
                     {t(
                       "travelPlans.allAttractionsAdded",
-                      "All available attractions have been added to this plan."
+                      "All available attractions have been added to this plan.",
                     )}
                   </p>
                 </div>
