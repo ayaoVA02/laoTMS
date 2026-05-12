@@ -16,6 +16,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { supabase } from "@/lib/supabase";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -47,25 +48,37 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [error, setError] = useState<string | null>(null);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     const result = await login(email, password);
     if (result.success) {
-      router.push("/");
+      router.push("/dashboard");
     }
     setIsLoading(false);
+
+    if(result.success === false) {
+      setError("Invalid email or password");
+    }
   };
 
   const handleDemoLogin = (role: "ADMIN" | "STAFF" | "ENTREPRENEUR" | "TOURIST") => {
-    loginAsDemo(role);
-    router.push("/");
+    // loginAsDemo(role);
+    router.push("/dashboard");
   };
 
-  const handleGoogleLogin = () => {
-    loginAsDemo("TOURIST");
-    router.push("/");
+  const handleGoogleLogin = async() => {
+    // loginAsDemo("TOURIST");
+    const {data, error} = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`
+      }
+    })
+
+    console.log("Google login data:", data, "error:", error);
+    // router.push("/");
   };
 
   return (
@@ -150,14 +163,14 @@ export default function LoginPage() {
           className="w-full max-w-md"
         >
           {/* Mobile logo */}
-          <motion.div variants={fadeInUp} className="lg:hidden flex items-center gap-2 mb-8">
+          {/* <motion.div variants={fadeInUp} className="lg:hidden flex items-center gap-2 mb-8">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
               <Globe className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-teal-600 to-emerald-600 bg-clip-text text-transparent">
               LaoTMS
             </span>
-          </motion.div>
+          </motion.div> */}
 
           <motion.div variants={fadeInUp}>
             <Card className="border-0 shadow-none sm:border sm:shadow-sm bg-transparent sm:bg-card">
@@ -254,6 +267,10 @@ export default function LoginPage() {
                         )}
                       </button>
                     </div>
+                  </div>
+
+                  <div>
+                    <p className="text-red-500 text-sm">{error}</p>
                   </div>
 
                   <Button

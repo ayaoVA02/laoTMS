@@ -23,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabase";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -51,7 +53,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [error, setError] = useState<string | null>(null);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) return;
@@ -62,13 +64,30 @@ export default function RegisterPage() {
     const userRole = (role === "ENTREPRENEUR" ? "ENTREPRENEUR" : "TOURIST") as "ENTREPRENEUR" | "TOURIST";
     const result = await register(email, password, userRole, firstName, lastName);
     if (result.success) {
-      router.push("/");
+
+      toast.success(t("auth.registrationSuccess", "Registration successful! Please check your email to verify your account."));
+      // router.push("/auth/login");
+      router.push('/onboarding');
     }
     setIsLoading(false);
+
+
+    if (result.success === false) {
+      setError("Something went wrong. Please try again.");
+    }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     /* placeholder for OAuth */
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`
+      }
+    })
+
+    console.log("Google login data:", data, "error:", error);
   };
 
   return (
@@ -333,6 +352,9 @@ export default function RegisterPage() {
                         </SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div>
+                    <p className="text-red-500 text-sm">{error}</p>
                   </div>
 
                   <Button

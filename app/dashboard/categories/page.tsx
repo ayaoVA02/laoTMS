@@ -32,6 +32,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import toast from "react-hot-toast";
 
 interface CategoryType {
   type_id: string;
@@ -152,10 +153,11 @@ export default function CategoriesPage() {
   const handleSave = async () => {
     if (!formData.name_en.trim() || !formData.name_la.trim()) return;
     setSaving(true);
-
+    console.log(editingCategory ? "Updating category..." : "Creating category...", formData);
     try {
+      console.log('editingCategory.type_id:', editingCategory?.type_id);
       if (editingCategory) {
-        const { error } = await supabase
+        const { error, data } = await supabase
           .from("types")
           .update({
             name_la: formData.name_la,
@@ -167,6 +169,7 @@ export default function CategoriesPage() {
           })
           .eq("type_id", editingCategory.type_id);
 
+          console.log('Update result:', { error, data });
         if (!error) {
           setCategories((prev) =>
             prev.map((c) =>
@@ -176,6 +179,8 @@ export default function CategoriesPage() {
             )
           );
         }
+        if (!error) toast.success("Category updated successfully");
+        
       } else {
         const { data, error } = await supabase
           .from("types")
@@ -193,8 +198,11 @@ export default function CategoriesPage() {
         if (!error && data) {
           setCategories((prev) => [...prev, data as CategoryType]);
         }
+        toast.success("Category created successfully");
       }
-    } catch {
+    } catch (error) {
+      console.error("Error saving category", error);
+      toast.error("Error saving category");
       /* ignore */
     }
 
@@ -494,7 +502,7 @@ export default function CategoriesPage() {
             </div>
 
             {/* Image URL */}
-            <div className="space-y-1.5">
+            {/* <div className="space-y-1.5">
               <label className="text-sm font-medium">Image URL</label>
               <Input
                 placeholder="https://..."
@@ -503,7 +511,7 @@ export default function CategoriesPage() {
                   setFormData((f) => ({ ...f, type_image: e.target.value }))
                 }
               />
-            </div>
+            </div> */}
 
             {/* Is Active Toggle */}
             <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">

@@ -12,6 +12,7 @@ import {
   Sparkles,
   TrendingUp,
   Tag,
+  ChevronDown, ChevronUp
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import AttractionCard from "@/components/shared/attraction-card";
@@ -19,7 +20,8 @@ import { useAttractionStore } from "@/stores/attraction-store";
 import Link from "next/link";
 import Image from "next/image";
 import Footer from "@/components/layout/footer";
-
+import { useState } from "react";
+import { Button } from '@/components/ui/button';
 
 const popularDestinations = [
   {
@@ -53,7 +55,7 @@ export default function Home() {
   const { attractions = [], types = [] } = useAttractionStore();
   const promotions: { id: string; title: string; description: string; image: string; discount: number; validUntil: string; attractionId: string }[] = [];
   const featuredAttractions = attractions.filter((a) => a.featured);
-  
+  const [isExpanded, setIsExpanded] = useState(false);
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ===== HERO SECTION ===== */}
@@ -214,10 +216,17 @@ export default function Home() {
           </motion.div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4">
-            {types.map((category, index) => {
+            {types.filter(category=> category.is_active).map((category, index) => {
               const IconComponent = category.icon && (LucideIcons as unknown as Record<string, React.ElementType>)[category.icon]
                 ? (LucideIcons as unknown as Record<string, React.ElementType>)[category.icon]
                 : Tag;
+
+              // Visibility Logic:
+              // Mobile: Index < 6 (3 lines)
+              // Desktop: Index < 8 (2 lines)
+              // If isExpanded is true, show everything.
+              const isHiddenMobile = index >= 6;
+              const isHiddenDesktop = index >= 8;
               return (
                 <motion.div
                   key={category.id}
@@ -225,6 +234,10 @@ export default function Home() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.08, duration: 0.5 }}
+                  className={`
+                  ${!isExpanded && isHiddenMobile ? 'max-md:hidden' : ''}
+                  ${!isExpanded && isHiddenDesktop ? 'md:hidden' : ''}
+                `}
                 >
                   <Link
                     href={`/attractions?category=${category.id}`}
@@ -241,6 +254,28 @@ export default function Home() {
               );
             })}
           </div>
+          {/* Show More / Show Less Button */}
+          {types.length > 6 && (
+            <div className="mt-12 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="rounded-full border-teal-200 px-8 py-6 text-teal-600 hover:bg-teal-50 hover:text-teal-700"
+              >
+                {isExpanded ? (
+                  <>
+                    {t("common.show_less", "Show Less")}
+                    <ChevronUp className="ml-2 h-4 w-4" />
+                  </>
+                ) : (
+                  <>
+                    {t("common.show_more", "Show More Categories")}
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 

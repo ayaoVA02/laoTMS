@@ -105,7 +105,7 @@ interface AttractionState {
   favorites: string[];
   searchQuery: string;
   selectedCategory: string;
-  types: { id: string; name_en: string; name_la: string; icon: string }[];
+  types: { id: string; name_en: string; name_la: string; icon: string , is_active:boolean }[];
   loading: boolean;
   setSelectedAttraction: (a: Attraction | null) => void;
   setSearchQuery: (q: string) => void;
@@ -211,7 +211,7 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
     try {
       const { data } = await supabase.from('types').select('*').eq('is_active', true).order('name_en');
       if (data) {
-        set({ types: data.map((t) => ({ id: t.type_id, name_en: t.name_en, name_la: t.name_la, icon: t.type_icon })) });
+        set({ types: data.map((t) => ({ id: t.type_id, name_en: t.name_en, name_la: t.name_la, icon: t.type_icon, is_active: t.is_active })) });
       }
     } catch { /* ignore */ }
   },

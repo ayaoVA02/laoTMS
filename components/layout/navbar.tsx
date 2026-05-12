@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 const navLinks = [
   { href: "/", labelKey: "nav.home" },
@@ -45,7 +46,7 @@ export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const { language, setLanguage } = useAppStore();
   const { unreadCount } = useNotificationStore();
-
+  const router = useRouter();
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -81,6 +82,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     logout();
+    router.push("/");
     setUserDropdownOpen(false);
   };
 
@@ -157,22 +159,20 @@ export default function Navbar() {
                   >
                     <button
                       onClick={() => handleLanguageToggle("en")}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${
-                        language === "en"
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${language === "en"
                           ? "text-teal-500 font-medium"
                           : "text-muted-foreground"
-                      }`}
+                        }`}
                     >
                       <span className="text-base">GB</span>
                       English
                     </button>
                     <button
                       onClick={() => handleLanguageToggle("la")}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${
-                        language === "la"
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${language === "la"
                           ? "text-teal-500 font-medium"
                           : "text-muted-foreground"
-                      }`}
+                        }`}
                     >
                       <span className="text-base">LA</span>
                       Lao
@@ -247,9 +247,8 @@ export default function Navbar() {
                     <User className="w-4 h-4 text-white" />
                   </div>
                   <ChevronDown
-                    className={`w-3.5 h-3.5 transition-transform hidden sm:block ${
-                      userDropdownOpen ? "rotate-180" : ""
-                    }`}
+                    className={`w-3.5 h-3.5 transition-transform hidden sm:block ${userDropdownOpen ? "rotate-180" : ""
+                      }`}
                   />
                 </Button>
                 <AnimatePresence>
@@ -363,11 +362,10 @@ export default function Navbar() {
                   >
                     <Link
                       href={link.href}
-                      className={`flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                        isActive
+                      className={`flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
                           ? "bg-teal-500/10 text-teal-500"
                           : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                      }`}
+                        }`}
                     >
                       {t(link.labelKey)}
                     </Link>
