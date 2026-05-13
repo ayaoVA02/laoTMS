@@ -29,6 +29,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/stores/auth-store";
+import { useTravelPlanStore } from "@/stores/travel-plan-store";
+import { useAttractionStore } from "@/stores/attraction-store";
 import { attractions, reviews } from "@/data/attractions";
 import Sidebar from "@/components/layout/sidebar";
 import { useAppStore } from "@/stores/app-store";
@@ -107,6 +109,8 @@ export default function DashboardPage() {
   const { t } = useTranslation();
   const { user, isAuthenticated } = useAuthStore();
   const { sidebarOpen, setSidebarOpen } = useAppStore();
+  const { favorites = [] } = useAttractionStore();
+  const { plans = [] } = useTravelPlanStore();
   const role = user?.role || "TOURIST";
 
 
@@ -717,8 +721,8 @@ export default function DashboardPage() {
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {[
-          { title: t("travelPlans.myPlans"), value: 3, icon: FileText, accent: "from-teal-500 to-emerald-600" },
-          { title: "Favorites", value: 7, icon: Star, accent: "from-amber-500 to-orange-600" },
+          { title: t("travelPlans.myPlans"), value: plans.length, icon: FileText, accent: "from-teal-500 to-emerald-600" },
+          { title: t("sidebar.favorites", "Favorites"), value: favorites.length, icon: Star, accent: "from-amber-500 to-orange-600" },
         ].map((stat) => (
           <motion.div key={stat.title} variants={itemVariants}>
             <Card className="border-0 shadow-md relative overflow-hidden">

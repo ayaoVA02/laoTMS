@@ -6,16 +6,28 @@ import i18n from '@/lib/i18n';
 import Navbar from '@/components/layout/navbar';
 import MobileTabBar from '@/components/layout/mobile-tab-bar';
 import { useAttractionStore } from '@/stores/attraction-store';
+import { useTravelPlanStore } from '@/stores/travel-plan-store';
+import { useAuthStore } from '@/stores/auth-store';
 import { useEffect } from 'react';
 
 function DataInitializer() {
   const fetchAttractions = useAttractionStore((s) => s.fetchAttractions);
   const fetchTypes = useAttractionStore((s) => s.fetchTypes);
+  const fetchFavorites = useAttractionStore((s) => s.fetchFavorites);
+  const fetchPlans = useTravelPlanStore((s) => s.fetchPlans);
+  const { user, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     fetchAttractions();
     fetchTypes();
-  }, []);
+  }, [fetchAttractions, fetchTypes]);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchFavorites(user.id);
+      fetchPlans(user.id);
+    }
+  }, [isAuthenticated, user, fetchFavorites, fetchPlans]);
 
   return null;
 }

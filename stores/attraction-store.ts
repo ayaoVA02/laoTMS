@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/auth-store';
 
 export interface Attraction {
   id: string;
@@ -110,7 +111,7 @@ interface AttractionState {
   setSelectedAttraction: (a: Attraction | null) => void;
   setSearchQuery: (q: string) => void;
   setSelectedCategory: (c: string) => void;
-  toggleFavorite: (id: string) => void;
+  toggleFavorite: (id: string) => Promise<void>;
   filterAttractions: () => void;
   fetchAttractions: () => Promise<void>;
   fetchTypes: () => Promise<void>;
@@ -139,12 +140,17 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
     get().filterAttractions();
   },
 
-  toggleFavorite: (id) =>
-    set((s) => ({
-      favorites: s.favorites.includes(id)
-        ? s.favorites.filter((f) => f !== id)
-        : [...s.favorites, id],
-    })),
+  toggleFavorite: async (id) => {
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    const { favorites } = get();
+    if (favorites.includes(id)) {
+      await get().removeFavorite(user.id, id);
+    } else {
+      await get().addFavorite(user.id, id);
+    }
+  },
 
   filterAttractions: () => {
     const { attractions, searchQuery, selectedCategory } = get();
