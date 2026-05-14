@@ -11,6 +11,7 @@ import {
   Trash2,
   Plus,
   Navigation,
+  Heart,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTravelPlanStore } from "@/stores/travel-plan-store";
@@ -20,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Footer from "@/components/layout/footer";
 import Image from "next/image";
+import { useAuthStore } from "@/stores/auth-store";
 
 function haversineDistance(
   lat1: number,
@@ -44,42 +46,47 @@ export default function TravelPlanDetailPage() {
   const { t } = useTranslation();
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuthStore();
   const {
     plans = [],
     removeAttractionFromPlan,
     addAttractionToPlan,
   } = useTravelPlanStore();
-  const { attractions: allAttractions = [] } = useAttractionStore();
+  const {
+    attractions: allAttractions = [],
+    favorites = [],
+    fetchFavorites,
+  } = useAttractionStore();
 
-  const getAttractionById = (id: string) =>
-    allAttractions.find((a) => a.id === id);
+  // const getAttractionById = (id: string) =>
+  //   allAttractions.find((a) => a.id === id);
 
   const plan = useMemo(
     () => plans.find((p) => p.id === params.id) ?? null,
     [plans, params.id],
   );
 
-  const planAttractions = useMemo(
-    () =>
-      plan
-        ? (plan.attractionIds
-            .map((id) => getAttractionById(id))
-            .filter(Boolean) as Attraction[])
-        : [],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [plan],
-  );
+  const planAttractions = useMemo(() => {
+    if (!plan) return [];
+    return plan.attractionIds
+      .map((id) => allAttractions.find((a) => a.id === id))
+      .filter((a): a is Attraction => !!a);
+  }, [plan, allAttractions]);
 
-  const availableAttractions = useMemo(
-    () =>
-      plan
-        ? allAttractions.filter(
-            (a) =>
-              !plan.attractionIds.includes(a.id) && a.status === "approved",
-          )
-        : [],
-    [plan, allAttractions],
-  );
+
+
+  const availableAttractions = useMemo(() => {
+    if (!plan) return [];
+    return allAttractions
+      .filter(
+        (a) => !plan.attractionIds.includes(a.id) && a.status === "approved",
+      )
+      .sort((a, b) => {
+        const aFav = favorites.includes(a.id) ? 1 : 0;
+        const bFav = favorites.includes(b.id) ? 1 : 0;
+        return bFav - aFav; // Sort 1 (fav) before 0 (non-fav)
+      });
+  }, [plan, allAttractions, favorites]);
 
   const totalDistance = useMemo(() => {
     if (planAttractions.length < 2) return 0;
@@ -576,67 +583,88 @@ export default function TravelPlanDetailPage() {
             className="lg:col-span-1"
           >
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 sticky top-16">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">
-                {t("travelPlans.addAttractions", "Add Attractions")}
-              </h2>
-              <p className="text-xs text-gray-500 mb-5">
-                {t(
-                  "travelPlans.availableAttractions",
-                  "Available attractions to add to your plan",
-                )}
-              </p>
+              <div className="mb-5">
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                  {t("travelPlans.addSpots", "Add Spots")}
+                </h2>
+                <p className="text-xs text-gray-500">
+                  {t(
+                    "travelPlans.favFirst",
+                    "Favorites are prioritized for you",
+                  )}
+                </p>
+              </div>
 
               {availableAttractions.length > 0 ? (
-                <div className="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
-                  {availableAttractions.map((attraction) => (
-                    <motion.div
-                      key={attraction.id}
-                      whileHover={{ scale: 1.01 }}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-teal-200 hover:bg-teal-50/30 transition-all cursor-pointer group"
-                    >
-                      {/* Thumbnail */}
-                      <div className="relative shrink-0 h-12 w-12 rounded-lg overflow-hidden">
-                        <Image
-                          src={attraction.images[0]}
-                          alt={attraction.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
+                <div className="space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto pr-1 custom-scrollbar">
+                  {availableAttractions.map((attraction) => {
+                    // 1. Logic to check if this item is a favorite
+                    const isFav = favorites.includes(attraction.id);
 
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium text-gray-800 truncate">
-                          {attraction.name}
-                        </h4>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <MapPin className="h-3 w-3 text-teal-500 shrink-0" />
-                          <span className="text-xs text-gray-500 truncate">
-                            {attraction.location}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Add Button */}
-                      <Button
-                        size="icon"
-                        onClick={() => {
-                          const ok = window.confirm(
-                            `Add "${attraction.name}" to this travel plan?`,
-                          );
-
-                          if (ok) {
-                            addAttractionToPlan(plan.id, attraction.id);
-                          }
-                        }}
-                        className="shrink-0 h-8 w-8 bg-teal-600 hover:bg-teal-700 text-white shadow-sm"
+                    return (
+                      <motion.div
+                        layout // Adds smooth layout animations when items are removed
+                        key={attraction.id}
+                        whileHover={{ scale: 1.01 }}
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer group ${
+                          isFav
+                            ? "bg-amber-50/50 border-amber-100 hover:border-amber-200"
+                            : "bg-gray-50 border-gray-100 hover:border-teal-200 hover:bg-teal-50/30"
+                        }`}
                       >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </motion.div>
-                  ))}
+                        {/* Thumbnail with Star Badge for Favorites */}
+                        <div className="relative shrink-0 h-12 w-12 rounded-lg overflow-hidden">
+                          <Image
+                            src={attraction.images[0]}
+                            alt={attraction.name}
+                            fill
+                            className="object-cover"
+                          />
+                          {isFav && (
+                            <div className="absolute top-0 right-0 p-0.5 bg-red-400 rounded-bl-md">
+                              <Heart className="h-2 w-2 text-white fill-current" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-medium text-gray-800 truncate">
+                            {attraction.name}
+                          </h4>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {/* province style from second code or location from first */}
+                            <span className="text-[10px] text-gray-500 uppercase tracking-tight">
+                              {attraction.province || attraction.location}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Add Button - Color changes based on isFav */}
+                        <Button
+                          size="icon"
+                          onClick={() => {
+                            const ok = window.confirm(
+                              `Add "${attraction.name}" to this travel plan?`,
+                            );
+                            if (ok) {
+                              addAttractionToPlan(plan.id, attraction.id);
+                            }
+                          }}
+                          className={`shrink-0 h-8 w-8 rounded-full shadow-sm transition-colors ${
+                            isFav
+                              ? "bg-amber-500 hover:bg-amber-600 text-white"
+                              : "bg-teal-600 hover:bg-teal-700 text-white"
+                          }`}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               ) : (
+                /* Keeps the empty state from your first code */
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Badge className="bg-teal-50 text-teal-700 border-teal-200 mb-3">
                     {t("travelPlans.allAdded", "All added")}
