@@ -266,6 +266,7 @@ const copyLink = async () => {
     console.error("Failed to copy:", err);
   }
 };
+
 const handleShare = async () => {
   const url = window.location.href;
   const title = attraction?.name || "Check this attraction";
@@ -542,7 +543,7 @@ const handleShare = async () => {
             </Button>
             <Button
               variant="outline"
-               onClick={handleShare}
+              onClick={handleShare}
               className="border-gray-200 text-gray-600 hover:text-teal-700 hover:border-teal-300"
             >
               <Share2 className="mr-2 h-4 w-4" />
