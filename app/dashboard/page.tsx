@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   BarChart3,
@@ -31,7 +31,7 @@ import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/stores/auth-store";
 import { useTravelPlanStore } from "@/stores/travel-plan-store";
 import { useAttractionStore } from "@/stores/attraction-store";
-import { attractions, reviews } from "@/data/attractions";
+import { attractions, reviews as sampleReviews } from "@/data/attractions";
 import Sidebar from "@/components/layout/sidebar";
 import { useAppStore } from "@/stores/app-store";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/lib/supabase";
 import {
   Select,
   SelectContent,
@@ -155,7 +156,6 @@ export default function DashboardPage() {
   const { favorites = [] } = useAttractionStore();
   const { plans = [] } = useTravelPlanStore();
   const role = user?.role || "TOURIST";
-
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingAttraction, setEditingAttraction] = useState<
@@ -170,6 +170,16 @@ export default function DashboardPage() {
     socialShare: false,
   });
   const [localAttractions, setLocalAttractions] = useState(attractions || []);
+  const [myReviews, setMyReviews] = useState<
+    {
+      id: string;
+      attractionName: string;
+      rating: number;
+      content: string;
+      createdAt: string;
+    }[]
+  >([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [socialShareStates, setSocialShareStates] = useState<
     Record<string, boolean>
   >(() =>
@@ -186,6 +196,62 @@ export default function DashboardPage() {
     (a) => a.entrepreneurId === "3",
   );
   const totalRoleUsers = roleDistribution.reduce((sum, r) => sum + r.count, 0);
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) {
+      setMyReviews([]);
+      return;
+    }
+
+    const fetchMyReviews = async () => {
+      setReviewsLoading(true);
+
+      const { data: reviewRows, error } = await supabase
+        .from("reviews")
+        .select("review_id, attraction_id, rating, content, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Failed to fetch dashboard reviews:", error);
+        setMyReviews([]);
+        setReviewsLoading(false);
+        return;
+      }
+
+      const attractionIds = Array.from(
+        new Set((reviewRows || []).map((review) => review.attraction_id)),
+      );
+      const attractionNames: Record<string, string> = {};
+
+      if (attractionIds.length > 0) {
+        const { data: attractionRows, error: attractionError } = await supabase
+          .from("attractions")
+          .select("attraction_id, name_en")
+          .in("attraction_id", attractionIds);
+
+        if (attractionError) {
+          console.error("Failed to fetch attraction names:", attractionError);
+        }
+
+        (attractionRows || []).forEach((attraction) => {
+          attractionNames[attraction.attraction_id] = attraction.name_en;
+        });
+      }
+
+      setMyReviews(
+        (reviewRows || []).map((review) => ({
+          id: review.review_id,
+          attractionName: attractionNames[review.attraction_id] || "Unknown Attraction",
+          rating: Number(review.rating) || 0,
+          content: review.content || "No comment provided.",
+          createdAt: review.created_at || "",
+        })),
+      );
+      setReviewsLoading(false);
+    };
+
+    fetchMyReviews();
+  }, [isAuthenticated, user?.id]);
 
   const handleApprove = (id: string) => {
     setLocalAttractions((prev) =>
@@ -382,7 +448,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title={t("dashboard.totalReviews")}
-          value={reviews.length}
+          value={sampleReviews.length}
           change="+23%"
           up
           icon={Star}
@@ -1386,39 +1452,58 @@ export default function DashboardPage() {
               My Reviews
             </CardTitle>
           </CardHeader>
+          
           <CardContent>
             <div className="space-y-3 sm:space-y-4">
-              {(reviews || []).slice(0, 4).map((review) => {
-                const attraction = (localAttractions || []).find(
-                  (a) => a.id === review.attractionId,
-                );
-                return (
+              {reviewsLoading ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  Loading your reviews...
+                </p>
+              ) : myReviews.length > 0 ? (
+                myReviews.map((review) => (
                   <div
                     key={review.id}
                     className="p-3 sm:p-4 rounded-xl border bg-card"
                   >
                     <div className="flex items-center justify-between mb-2 gap-2">
                       <span className="text-xs sm:text-sm font-medium text-teal-600 truncate">
-                        {attraction?.name || "Unknown"}
+                        {review.attractionName}
                       </span>
+
                       <div className="flex items-center gap-0.5 shrink-0">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
                             key={i}
-                            className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${i < review.rating ? "text-amber-400 fill-amber-400" : "text-muted-foreground/30"}`}
+                            className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${
+                              i < review.rating
+                                ? "text-amber-400 fill-amber-400"
+                                : "text-muted-foreground/30"
+                            }`}
                           />
                         ))}
                       </div>
                     </div>
+
                     <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed line-clamp-2">
-                      {review.comment}
+                      {review.content}
                     </p>
+
                     <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
-                      {review.date}
+                      {review.createdAt
+                        ? new Date(review.createdAt).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })
+                        : ""}
                     </p>
                   </div>
-                );
-              })}
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  You have not written any reviews yet.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

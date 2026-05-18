@@ -29,6 +29,7 @@ import {
 
 import { useTranslation } from "react-i18next";
 import { useAttractionStore } from "@/stores/attraction-store";
+import { useReviewStore } from "@/stores/review-store";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +91,7 @@ export default function AttractionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { plans, fetchPlans, addAttractionToPlan } = useTravelPlanStore();
+  const { reviews, fetchReviews, submitReview, averageRating } = useReviewStore();
 
   const [addToPlanOpen, setAddToPlanOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState("");
@@ -99,17 +101,6 @@ export default function AttractionDetailPage() {
   const { user, isAuthenticated } = useAuthStore();
 
   const attractionId = Array.isArray(params.id) ? params.id[0] : params.id;
-
-  const [reviews, setReviews] = useState<
-    {
-      id: string;
-      attractionId: string;
-      userName: string;
-      rating: number;
-      comment: string;
-      date: string;
-    }[]
-  >([]);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -126,6 +117,16 @@ export default function AttractionDetailPage() {
       fetchPlans(user.id);
     }
   }, [isAuthenticated, user, fetchPlans]);
+
+  // Fetch reviews when attraction loads
+  useEffect(() => {
+    if (attractionId) {
+      console.log('Fetching reviews for attraction:', attractionId);
+      fetchReviews(attractionId).catch(err => {
+        console.error('Failed to fetch reviews:', err);
+      });
+    }
+  }, [attractionId, fetchReviews]);
 const handleAddToPlan = async () => {
   if (!selectedPlanId || !attraction) return;
 
@@ -164,18 +165,15 @@ const handleAddToPlan = async () => {
     [attractions, attractionId],
   );
 
-  const attractionReviews = useMemo(
-    () => reviews.filter((r) => r.attractionId === attractionId),
-    [reviews, attractionId],
-  );
+  const attractionReviews = useMemo(() => {
+    const filtered = reviews.filter((r) => r.attractionId === attractionId);
+    console.log('Component reviews:', { attractionId, allReviews: reviews, filtered });
+    return filtered;
+  }, [reviews, attractionId]);
 
   const averageReviewRating = useMemo(() => {
-    if (attractionReviews.length === 0) return 0;
-
-    const sum = attractionReviews.reduce((acc, r) => acc + r.rating, 0);
-
-    return sum / attractionReviews.length;
-  }, [attractionReviews]);
+    return averageRating;
+  }, [averageRating]);
 
   if (!attraction) {
     return (
@@ -301,33 +299,28 @@ const handleShare = async () => {
 };
 
 
-//Handler submit Reivew
-  const handleSubmitReview = () => {
-    if (!reviewComment.trim() || reviewRating === 0) return;
+//Handler submit Review
+  const handleSubmitReview = async () => {
+    if (!reviewComment.trim()) return;
 
-    const finalName = isAuthenticated
-      ? user?.name || "Anonymous"
-      : reviewName.trim();
-
-    if (!finalName) return;
-
-    const newReview = {
-      id: crypto.randomUUID(),
-      attractionId: attraction.id,
-      userName: finalName,
-      rating: reviewRating,
-      comment: reviewComment.trim(),
-      date: new Date().toISOString(),
-    };
-
-    setReviews((prev) => [newReview, ...prev]);
-
-    setReviewRating(0);
-    setHoverRating(0);
-    setReviewComment("");
-
-    if (!isAuthenticated) {
-      setReviewName("");
+    try {
+      const result = await submitReview(attractionId, reviewComment.trim(), reviewRating || undefined);
+      
+      if (result.success) {
+        // Reset form
+        setReviewRating(0);
+        setHoverRating(0);
+        setReviewComment("");
+        if (!isAuthenticated) {
+          setReviewName("");
+        }
+        // Reviews will be refetched by the store
+      } else {
+        alert(t("attraction.reviewSubmitError", "Failed to submit review. Please try again."));
+      }
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      alert(t("attraction.reviewSubmitError", "Failed to submit review. Please try again."));
     }
   };
 
@@ -702,7 +695,7 @@ const handleShare = async () => {
                           {review.userName}
                         </span>
                         <span className="text-xs text-gray-400 shrink-0">
-                          {new Date(review.date).toLocaleDateString("en-US", {
+                          {new Date(review.createdAt).toLocaleDateString("en-US", {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
@@ -710,10 +703,10 @@ const handleShare = async () => {
                         </span>
                       </div>
                       <div className="mt-0.5">
-                        {renderStars(review.rating, "h-3 w-3")}
+                        {renderStars(review.rating ?? 0, "h-3 w-3")}
                       </div>
                       <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                        {review.comment}
+                        {review.content}
                       </p>
                     </div>
                   </motion.div>
@@ -806,7 +799,7 @@ const handleShare = async () => {
 
               <Button
                 onClick={handleSubmitReview}
-                disabled={reviewRating === 0 || !reviewComment.trim()}
+                disabled={!reviewComment.trim()}
                 className="bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="mr-2 h-4 w-4" />
