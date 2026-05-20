@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { useAttractionStore } from "@/stores/attraction-store";
 import type { Attraction } from "@/stores/attraction-store";
+import Image from "next/image";
 
 interface AttractionCardProps {
   attraction: Attraction;
@@ -60,11 +61,13 @@ export default function AttractionCard({
         <div className="overflow-hidden rounded-xl bg-white shadow-md transition-all duration-300 group-hover:scale-[1.02] group-hover:shadow-xl">
           {/* Image Section */}
           <div className="relative aspect-[4/3] overflow-hidden">
-            <img
+            <Image
               src={attraction.images[0]}
               alt={attraction.name}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
             />
 
             {/* Gradient Overlay */}

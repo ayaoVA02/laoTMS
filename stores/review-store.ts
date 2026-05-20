@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth-store';
+import { useAttractionStore } from '@/stores/attraction-store';
 
 export interface Review {
   id: string;
@@ -18,8 +19,14 @@ interface ReviewState {
   averageRating: number;
   loading: boolean;
   submitting: boolean;
+
   fetchReviews: (id: string) => Promise<void>;
-  submitReview: (id: string, content: string, rating?: number) => Promise<{ success: boolean }>;
+
+  submitReview: (
+    id: string,
+    content: string,
+    rating?: number
+  ) => Promise<{ success: boolean }>;
 }
 
 export const useReviewStore = create<ReviewState>((set, get) => ({
@@ -30,102 +37,78 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
 
   fetchReviews: async (attractionId: string) => {
     set({ loading: true });
+
     try {
-      console.log('Fetching reviews for attraction:', attractionId);
-      
-      // First check if attractionId is valid
-      if (!attractionId || attractionId.trim() === '') {
+      if (!attractionId?.trim()) {
         console.error('Invalid attractionId');
-        set({ reviews: [], averageRating: 0, loading: false });
+        set({
+          reviews: [],
+          averageRating: 0,
+          loading: false,
+        });
         return;
       }
 
       const { data, error } = await supabase
         .from('reviews')
-        .select('review_id, user_id, attraction_id, rating, content, created_at')
+        .select(
+          'review_id, user_id, attraction_id, rating, content, created_at'
+        )
         .eq('attraction_id', attractionId)
         .order('created_at', { ascending: false });
 
-      console.log('Reviews query result:', { data, error });
-
       if (error) {
-        console.error('Error fetching reviews - Details:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-        });
-        
-        // If RLS error, try with minimal select
-        if (error.code === 'PGRST301' || error.message?.includes('permission')) {
-          console.warn('RLS policy may be blocking access. Attempting alternative query...');
-          const { data: altData, error: altError } = await supabase
-            .from('reviews')
-            .select('*', { count: 'exact' })
-            .eq('attraction_id', attractionId);
-          
-          if (altError) {
-            console.error('Alternative query also failed:', altError);
-            set({ reviews: [], averageRating: 0, loading: false });
-            return;
-          }
-          
-          const altMapped: Review[] = (altData || []).map((row: any) => ({
-            id: row.review_id,
-            userId: row.user_id,
-            userName: `User ${row.user_id.substring(0, 8)}`,
-            userAvatar: '',
-            rating: row.rating !== null ? Number(row.rating) : undefined,
-            content: row.content || '',
-            createdAt: row.created_at,
-            attractionId: row.attraction_id,
-          }));
-          
-          const withRating = altMapped.filter(r => r.rating !== undefined);
-          const avg = withRating.length > 0 
-            ? withRating.reduce((a, b) => a + (b.rating || 0), 0) / withRating.length 
-            : 0;
-          
-          set({ reviews: altMapped, averageRating: Number(avg.toFixed(2)), loading: false });
-          return;
-        }
-        
-        set({ reviews: [], averageRating: 0, loading: false });
-        return;
+        throw error;
       }
 
-      // Map reviews
       const mapped: Review[] = (data || []).map((row: any) => ({
         id: row.review_id,
         userId: row.user_id,
-        userName: `User ${row.user_id.substring(0, 8)}`,
+        userName: row.user_id
+          ? `User ${row.user_id.slice(0, 8)}`
+          : 'Anonymous',
         userAvatar: '',
-        rating: row.rating !== null ? Number(row.rating) : undefined,
+        rating:
+          row.rating !== null && row.rating !== undefined
+            ? Number(row.rating)
+            : undefined,
         content: row.content || '',
         createdAt: row.created_at,
         attractionId: row.attraction_id,
       }));
 
-      console.log('Mapped reviews count:', mapped.length);
+      const ratings = mapped
+        .map((r) => r.rating)
+        .filter((r): r is number => r !== undefined);
 
-      // Calculate average rating
-      const withRating = mapped.filter(r => r.rating !== undefined);
-      const avg = withRating.length > 0 
-        ? withRating.reduce((a, b) => a + (b.rating || 0), 0) / withRating.length 
-        : 0;
-      
-      console.log('Average rating:', avg);
-      
-      set({ reviews: mapped, averageRating: Number(avg.toFixed(2)), loading: false });
+      const avg =
+        ratings.length > 0
+          ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+          : 0;
+
+      set({
+        reviews: mapped,
+        averageRating: Number(avg.toFixed(2)),
+        loading: false,
+      });
     } catch (err) {
-      console.error('Exception in fetchReviews:', err);
-      set({ reviews: [], averageRating: 0, loading: false });
+      console.error('Error fetching reviews:', err);
+
+      set({
+        reviews: [],
+        averageRating: 0,
+        loading: false,
+      });
     }
   },
 
-  submitReview: async (attractionId: string, content: string, rating?: number) => {
-    const authState = useAuthStore.getState();
-    const user = authState.user;
-    
+  submitReview: async (
+    attractionId: string,
+    content: string,
+    rating?: number
+  ) => {
+    const user = useAuthStore.getState().user;
+
     if (!user?.id) {
       console.error('No authenticated user');
       return { success: false };
@@ -134,29 +117,57 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     set({ submitting: true });
 
     try {
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from('reviews')
-        .insert([{
-          user_id: user.id,
-          attraction_id: attractionId,
-          rating: rating ?? null,
-          content: content || '',
-        }]);
+        .insert([
+          {
+            user_id: user.id,
+            attraction_id: attractionId,
+            rating: rating ?? null,
+            content: content || '',
+          },
+        ]);
 
-      if (error) {
-        console.error('Error submitting review:', error);
-        set({ submitting: false });
-        return { success: false };
+      if (insertError) {
+        throw insertError;
       }
 
-      // Refetch reviews after successful submit
+      // Refresh reviews
       await get().fetchReviews(attractionId);
+
+      // Update attraction stats
+      const state = get();
+
+      const { error: updateError } = await supabase
+        .from('attractions')
+        .update({
+          rating: state.averageRating,
+          review_count: state.reviews.filter(
+            (r) => r.rating !== undefined
+          ).length,
+        })
+        .eq('attraction_id', attractionId);
+
+      if (updateError) {
+        console.error(
+          'Error updating attraction rating:',
+          updateError
+        );
+      }
+
+      await useAttractionStore
+        .getState()
+        .fetchSingleAttraction(attractionId);
+
       set({ submitting: false });
+
       return { success: true };
     } catch (err) {
-      console.error('Exception submitting review:', err);
+      console.error('Error submitting review:', err);
+
       set({ submitting: false });
+
       return { success: false };
     }
-  }
+  },
 }));
