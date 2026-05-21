@@ -33,29 +33,77 @@ interface MenuItem {
 const roleMenuItems: Record<UserRole, MenuItem[]> = {
   ADMIN: [
     { href: "/dashboard", labelKey: "sidebar.overview", icon: LayoutDashboard },
-    { href: "/dashboard/analytics", labelKey: "sidebar.analytics", icon: BarChart3 },
+    {
+      href: "/dashboard/analytics",
+      labelKey: "sidebar.analytics",
+      icon: BarChart3,
+    },
     { href: "/dashboard/users", labelKey: "sidebar.users", icon: Users },
-    { href: "/dashboard/attractions", labelKey: "sidebar.attractions", icon: Building2 },
-    { href: "/dashboard/settings", labelKey: "sidebar.settings", icon: Settings },
+    {
+      href: "/dashboard/attractions",
+      labelKey: "sidebar.attractions",
+      icon: Building2,
+    },
+    {
+      href: "/dashboard/settings",
+      labelKey: "sidebar.settings",
+      icon: Settings,
+    },
   ],
   STAFF: [
     { href: "/dashboard", labelKey: "sidebar.overview", icon: LayoutDashboard },
-    { href: "/dashboard/approve-attractions", labelKey: "sidebar.approveAttractions", icon: CheckSquare },
-    { href: "/dashboard/categories", labelKey: "sidebar.categories", icon: Tag },
-    { href: "/dashboard/manage-content", labelKey: "sidebar.manageContent", icon: FileText },
-    { href: "/dashboard/notifications", labelKey: "sidebar.notifications", icon: Bell },
+    {
+      href: "/dashboard/approve-attractions",
+      labelKey: "sidebar.approveAttractions",
+      icon: CheckSquare,
+    },
+    {
+      href: "/dashboard/categories",
+      labelKey: "sidebar.categories",
+      icon: Tag,
+    },
+    {
+      href: "/dashboard/manage-content",
+      labelKey: "sidebar.manageContent",
+      icon: FileText,
+    },
+    {
+      href: "/dashboard/notifications",
+      labelKey: "sidebar.notifications",
+      icon: Bell,
+    },
   ],
   ENTREPRENEUR: [
     { href: "/dashboard", labelKey: "sidebar.overview", icon: LayoutDashboard },
-    { href: "/dashboard/my-attractions", labelKey: "sidebar.myAttractions", icon: Building2 },
-    { href: "/dashboard/create-attraction", labelKey: "sidebar.createAttraction", icon: Plus },
-    { href: "/dashboard/promotions", labelKey: "sidebar.promotions", icon: BarChart3 },
-    { href: "/dashboard/notifications", labelKey: "sidebar.notifications", icon: Bell },
+    {
+      href: "/dashboard/my-attractions",
+      labelKey: "sidebar.myAttractions",
+      icon: Building2,
+    },
+    {
+      href: "/dashboard/create-attraction",
+      labelKey: "sidebar.createAttraction",
+      icon: Plus,
+    },
+    {
+      href: "/dashboard/promotions",
+      labelKey: "sidebar.promotions",
+      icon: BarChart3,
+    },
+    {
+      href: "/dashboard/notifications",
+      labelKey: "sidebar.notifications",
+      icon: Bell,
+    },
   ],
   TOURIST: [
     { href: "/dashboard", labelKey: "sidebar.overview", icon: LayoutDashboard },
     { href: "/dashboard/my-plans", labelKey: "sidebar.myPlans", icon: Map },
-    { href: "/dashboard/favorites", labelKey: "sidebar.favorites", icon: Building2 },
+    {
+      href: "/dashboard/favorites",
+      labelKey: "sidebar.favorites",
+      icon: Building2,
+    },
     { href: "/dashboard/reviews", labelKey: "sidebar.reviews", icon: FileText },
   ],
 };
@@ -84,7 +132,9 @@ export default function Sidebar() {
   const { sidebarOpen, toggleSidebar, setSidebarOpen } = useAppStore();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const menuItems = useMemo(() => {
     if (!user) return roleMenuItems.TOURIST;
@@ -154,10 +204,10 @@ export default function Sidebar() {
             )}
           </AnimatePresence>
 
-          {/* Close button - visible on all sizes when sidebar is open */}
+          {/* Close button - visible ONLY on mobile when sidebar is open */}
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors"
+            className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -193,7 +243,11 @@ export default function Sidebar() {
                     <motion.div
                       layoutId="sidebar-active-indicator"
                       className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-gradient-to-b from-teal-400 to-emerald-500"
-                      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 350,
+                        damping: 30,
+                      }}
                     />
                   )}
 

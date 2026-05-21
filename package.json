@@ -61,6 +61,7 @@
     "input-otp": "^1.2.4",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.446.0",
+    "mapbox-gl": "^3.23.1",
     "next": "13.5.1",
     "next-themes": "^0.3.0",
     "postcss": "8.4.30",
@@ -81,5 +82,8 @@
     "vaul": "^0.9.9",
     "zod": "^3.23.8",
     "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "@types/mapbox-gl": "^3.4.1"
   }
 }

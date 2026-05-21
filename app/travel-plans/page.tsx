@@ -31,12 +31,19 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import Image from "next/image";
 
 export default function TravelPlansPage() {
   const { t } = useTranslation();
-  const { plans = [], addPlan, removePlan } = useTravelPlanStore();
+  const {
+    plans = [],
+    createPlan,
+    fetchPlans,
+    deletePlan,
+  } = useTravelPlanStore();
   const { attractions: allAttractions = [] } = useAttractionStore();
-  const { isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
 
   const getAttractionById = (id: string) =>
     allAttractions.find((a) => a.id === id);
@@ -46,19 +53,36 @@ export default function TravelPlansPage() {
   const [newPlanDescription, setNewPlanDescription] = useState("");
   const [newPlanStartDate, setNewPlanStartDate] = useState("");
   const [newPlanEndDate, setNewPlanEndDate] = useState("");
-  useEffect(() => { setMounted(true); }, []);
+  const [isCreating, setIsCreating] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchPlans(user.id);
+    }
+  }, [isAuthenticated, user, fetchPlans]);
 
   if (!mounted) return null;
 
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-md">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-md"
+        >
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
             <Lock className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-xl font-bold mb-2">Login Required</h2>
-          <p className="text-sm text-muted-foreground mb-6">Sign in to create and manage your travel plans. Track your itineraries and save your favorite routes across Laos.</p>
+          <p className="text-sm text-muted-foreground mb-6">
+            Sign in to create and manage your travel plans. Track your
+            itineraries and save your favorite routes across Laos.
+          </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <a href="/auth/login" className="w-full sm:w-auto">
               <button className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-gradient-to-r from-teal-500 to-emerald-600 text-white font-medium shadow-md shadow-teal-500/20 hover:shadow-lg transition-shadow">
@@ -76,21 +100,39 @@ export default function TravelPlansPage() {
     );
   }
 
-  const handleCreatePlan = () => {
-    if (!newPlanName.trim()) return;
-    const newPlan = {
-      id: `tp${Date.now()}`,
-      name: newPlanName.trim(),
-      description: newPlanDescription.trim(),
-      attractionIds: [] as string[],
-      startDate: newPlanStartDate || new Date().toISOString().split("T")[0],
-      endDate: newPlanEndDate || new Date().toISOString().split("T")[0],
-      userId: "4",
-      createdAt: new Date().toISOString().split("T")[0],
-      status: "plan" as const,
-      dayNumber: 1,
-    };
-    addPlan(newPlan);
+  const handleCreatePlan = async () => {
+    if (!newPlanName.trim() || !user) return;
+
+    setIsCreating(true);
+    const today = new Date().toISOString().split("T")[0];
+
+    let startDate = newPlanStartDate || today;
+    let endDate = newPlanEndDate || startDate;
+
+    if (new Date(endDate) < new Date(startDate)) {
+      endDate = startDate;
+    }
+
+    const createdPlan = await createPlan(
+      user.id,
+      newPlanName.trim(),
+      newPlanDescription.trim(),
+      startDate,
+      endDate,
+    );
+
+    setIsCreating(false);
+
+    if (!createdPlan) {
+      toast.error(
+        t(
+          "travelPlans.createError",
+          "Unable to create travel plan. Please try again.",
+        ),
+      );
+      return;
+    }
+
     setNewPlanName("");
     setNewPlanDescription("");
     setNewPlanStartDate("");
@@ -98,8 +140,27 @@ export default function TravelPlansPage() {
     setCreateDialogOpen(false);
   };
 
-  const handleDeletePlan = (planId: string) => {
-    removePlan(planId);
+  const handleDeletePlan = async (planId: string) => {
+    const ok = window.confirm(
+      t("travelPlans.confirmDelete", `Delete this travel plan?`),
+    );
+
+    if (!ok) return;
+
+    try {
+      await deletePlan(planId);
+      toast.success(
+        t("travelPlans.deleteSuccess", "Travel plan deleted successfully."),
+      );
+    } catch (error) {
+      toast.error(
+        t(
+          "travelPlans.deleteError",
+          "Unable to delete the travel plan. Please try again.",
+        ),
+      );
+      console.error("handleDeletePlan error:", error);
+    }
   };
 
   const getPlanAttractions = (attractionIds: string[]) =>
@@ -121,10 +182,11 @@ export default function TravelPlansPage() {
   const getDaysBetween = (start: string, end: string) => {
     const startDate = new Date(start);
     const endDate = new Date(end);
-    const diff = Math.ceil(
-      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    return Math.max(diff, 1);
+
+    const diff =
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+
+    return Math.max(Math.floor(diff) + 1, 1);
   };
 
   return (
@@ -241,10 +303,11 @@ export default function TravelPlansPage() {
                                 key={attraction.id}
                                 className="relative h-10 w-10 rounded-full border-2 border-white overflow-hidden shadow-sm"
                               >
-                                <img
+                                <Image
                                   src={attraction.images[0]}
                                   alt={attraction.name}
-                                  className="h-full w-full object-cover"
+                                  fill
+                                  className="object-cover"
                                 />
                               </div>
                             ))}
@@ -259,7 +322,10 @@ export default function TravelPlansPage() {
 
                       {/* Action Buttons */}
                       <div className="mt-5 pt-4 border-t border-gray-100 flex items-center gap-2">
-                        <Link href={`/travel-plans/${plan.id}`} className="flex-1">
+                        <Link
+                          href={`/travel-plans/${plan.id}`}
+                          className="flex-1"
+                        >
                           <Button
                             variant="ghost"
                             className="w-full justify-center text-teal-700 hover:bg-teal-50 hover:text-teal-800"
@@ -268,7 +334,10 @@ export default function TravelPlansPage() {
                             {t("travelPlans.viewRoute", "View Route")}
                           </Button>
                         </Link>
-                        <Link href={`/travel-plans/${plan.id}`} className="flex-1">
+                        <Link
+                          href={`/travel-plans/${plan.id}`}
+                          className="flex-1"
+                        >
                           <Button
                             variant="ghost"
                             className="w-full justify-center text-gray-600 hover:bg-gray-50"
@@ -310,7 +379,7 @@ export default function TravelPlansPage() {
               <p className="mt-2 max-w-md text-sm text-gray-500">
                 {t(
                   "travelPlans.noPlansDescription",
-                  "Create your first travel plan to start organizing your trip across Laos."
+                  "Create your first travel plan to start organizing your trip across Laos.",
                 )}
               </p>
               <Button
@@ -335,7 +404,7 @@ export default function TravelPlansPage() {
             <DialogDescription>
               {t(
                 "travelPlans.createPlanDescription",
-                "Fill in the details below to create a new travel plan."
+                "Fill in the details below to create a new travel plan.",
               )}
             </DialogDescription>
           </DialogHeader>
@@ -349,7 +418,7 @@ export default function TravelPlansPage() {
                 onChange={(e) => setNewPlanName(e.target.value)}
                 placeholder={t(
                   "travelPlans.planNamePlaceholder",
-                  "e.g., Luang Prabang Heritage Tour"
+                  "e.g., Luang Prabang Heritage Tour",
                 )}
               />
             </div>
@@ -362,7 +431,7 @@ export default function TravelPlansPage() {
                 onChange={(e) => setNewPlanDescription(e.target.value)}
                 placeholder={t(
                   "travelPlans.descriptionPlaceholder",
-                  "Describe your travel plan..."
+                  "Describe your travel plan...",
                 )}
                 rows={3}
               />
@@ -375,7 +444,19 @@ export default function TravelPlansPage() {
                 <Input
                   type="date"
                   value={newPlanStartDate}
-                  onChange={(e) => setNewPlanStartDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => {
+                    const value = e.target.value;
+
+                    setNewPlanStartDate(value);
+
+                    if (
+                      newPlanEndDate &&
+                      new Date(newPlanEndDate) < new Date(value)
+                    ) {
+                      setNewPlanEndDate(value);
+                    }
+                  }}
                 />
               </div>
               <div>
@@ -385,6 +466,9 @@ export default function TravelPlansPage() {
                 <Input
                   type="date"
                   value={newPlanEndDate}
+                  min={
+                    newPlanStartDate || new Date().toISOString().split("T")[0]
+                  }
                   onChange={(e) => setNewPlanEndDate(e.target.value)}
                 />
               </div>
@@ -400,11 +484,13 @@ export default function TravelPlansPage() {
             </Button>
             <Button
               onClick={handleCreatePlan}
-              disabled={!newPlanName.trim()}
+              disabled={!newPlanName.trim() || isCreating}
               className="bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-50"
             >
               <Plus className="mr-2 h-4 w-4" />
-              {t("travelPlans.create", "Create")}
+              {isCreating
+                ? t("travelPlans.creating", "Creating...")
+                : t("travelPlans.create", "Create")}
             </Button>
           </DialogFooter>
         </DialogContent>

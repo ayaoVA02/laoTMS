@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Map, Calendar, MapPin, ChevronRight, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useAuthStore } from "@/stores/auth-store";
 import { useTravelPlanStore } from "@/stores/travel-plan-store";
 import DashboardLayout from "@/components/shared/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,9 +17,19 @@ const itemVariants = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 
 
 export default function MyPlansPage() {
   const { t } = useTranslation();
-  const { plans = [] } = useTravelPlanStore();
+  const { user, isAuthenticated } = useAuthStore();
+  const { plans = [], fetchPlans } = useTravelPlanStore();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchPlans(user.id);
+    }
+  }, [isAuthenticated, user, fetchPlans]);
   if (!mounted) return null;
 
   return (

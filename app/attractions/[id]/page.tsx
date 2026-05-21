@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Star,
@@ -26,14 +26,27 @@ import {
   Send,
   Play,
 } from "lucide-react";
+
 import { useTranslation } from "react-i18next";
 import { useAttractionStore } from "@/stores/attraction-store";
+import { useReviewStore } from "@/stores/review-store";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import Footer from "@/components/layout/footer";
+import { useAuthStore } from "@/stores/auth-store";
+import Image from "next/image";
+import { useTravelPlanStore } from "@/stores/travel-plan-store";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const facilityIcons: Record<string, React.ElementType> = {
   Parking: Car,
@@ -64,40 +77,103 @@ const facilityIcons: Record<string, React.ElementType> = {
 
 function formatLAK(price: number): string {
   if (price === 0) return "Free";
-  return new Intl.NumberFormat("lo-LA", {
-    style: "decimal",
-    maximumFractionDigits: 0,
-  }).format(price) + " LAK";
+
+  return (
+    new Intl.NumberFormat("lo-LA", {
+      style: "decimal",
+      maximumFractionDigits: 0,
+    }).format(price) + " LAK"
+  );
 }
 
 export default function AttractionDetailPage() {
   const { t } = useTranslation();
   const params = useParams();
   const router = useRouter();
+  const { plans, fetchPlans, addAttractionToPlan } = useTravelPlanStore();
+  const { reviews, fetchReviews, submitReview, averageRating } = useReviewStore();
+
+  const [addToPlanOpen, setAddToPlanOpen] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState("");
+
   const { attractions, favorites, toggleFavorite } = useAttractionStore();
-  const reviews: { id: string; attractionId: string; userName: string; rating: number; comment: string; date: string }[] = [];
+
+  const { user, isAuthenticated } = useAuthStore();
+
+  const attractionId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   const [reviewRating, setReviewRating] = useState(0);
+
   const [hoverRating, setHoverRating] = useState(0);
+
   const [reviewName, setReviewName] = useState("");
+
   const [reviewComment, setReviewComment] = useState("");
 
-  const attraction = useMemo(
-    () => (attractions || []).find((a) => a.id === params.id) ?? null,
-    [attractions, params.id]
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchPlans(user.id);
+    }
+  }, [isAuthenticated, user, fetchPlans]);
+
+  // Fetch reviews when attraction loads
+  useEffect(() => {
+    if (attractionId) {
+      console.log('Fetching reviews for attraction:', attractionId);
+      fetchReviews(attractionId).catch(err => {
+        console.error('Failed to fetch reviews:', err);
+      });
+    }
+  }, [attractionId, fetchReviews]);
+const handleAddToPlan = async () => {
+  if (!selectedPlanId || !attraction) return;
+
+  const targetPlan = plans.find((p) => p.id === selectedPlanId);
+
+  // Adding ': string' fixes the "implicitly has an any type" error
+  const isAlreadyPlanned = targetPlan?.attractionIds?.some(
+    (id: string) => id === attraction.id
   );
 
-  const attractionReviews = useMemo(
-    () => (reviews || []).filter((r) => r.attractionId === params.id),
-    [params.id]
+  if (isAlreadyPlanned) {
+    alert(t("attraction.alreadyInPlan", "This attraction is already in your plan!"));
+    return; 
+  }
+
+  try {
+    await addAttractionToPlan(selectedPlanId, attraction.id);
+    setAddToPlanOpen(false);
+    setSelectedPlanId("");
+  } catch (error) {
+    console.error("Failed to add attraction:", error);
+  }
+};
+  const handleGetDirections = () => {
+    if (!attraction?.location) return;
+
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      attraction.location,
+    )}`;
+
+    window.open(url, "_blank");
+  };
+
+  const attraction = useMemo(
+    () => (attractions || []).find((a) => a.id === attractionId) ?? null,
+    [attractions, attractionId],
   );
+
+  const attractionReviews = useMemo(() => {
+    const filtered = reviews.filter((r) => r.attractionId === attractionId);
+    console.log('Component reviews:', { attractionId, allReviews: reviews, filtered });
+    return filtered;
+  }, [reviews, attractionId]);
 
   const averageReviewRating = useMemo(() => {
-    if (attractionReviews.length === 0) return 0;
-    const sum = attractionReviews.reduce((acc, r) => acc + r.rating, 0);
-    return sum / attractionReviews.length;
-  }, [attractionReviews]);
+    return averageRating;
+  }, [averageRating]);
 
   if (!attraction) {
     return (
@@ -106,15 +182,18 @@ export default function AttractionDetailPage() {
           <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-teal-50 mx-auto">
             <MapPin className="h-12 w-12 text-teal-300" />
           </div>
+
           <h2 className="text-xl font-semibold text-gray-800">
             {t("attraction.notFound", "Attraction not found")}
           </h2>
+
           <p className="mt-2 text-sm text-gray-500">
             {t(
               "attraction.notFoundDesc",
-              "The attraction you are looking for does not exist."
+              "The attraction you are looking for does not exist.",
             )}
           </p>
+
           <Button
             onClick={() => router.push("/attractions")}
             className="mt-6 bg-teal-600 hover:bg-teal-700 text-white"
@@ -127,31 +206,131 @@ export default function AttractionDetailPage() {
   }
 
   const isFavorite = favorites.includes(attraction.id);
-  const images = attraction.images;
+
+  const images = attraction.images || [];
+
   const openHours = `${attraction.openTime} - ${attraction.closeTime}`;
 
   const handlePrevImage = () => {
+    if (!images.length) return;
+
     setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
 
   const handleNextImage = () => {
+    if (!images.length) return;
+
     setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
-  const handleSubmitReview = () => {
-    if (!reviewComment.trim() || reviewRating === 0) return;
-    // In a real app, this would post to an API
-    setReviewRating(0);
-    setReviewName("");
-    setReviewComment("");
+  // Share Social
+
+  const shareUrl =
+  typeof window !== "undefined"
+    ? window.location.origin + `/attractions/${attraction.id}`
+    : "";
+
+  const shareToFacebook = () => {
+  const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+    shareUrl,
+  )}`;
+  window.open(url, "_blank", "width=600,height=400");
+};
+
+const shareToTwitter = () => {
+  const text = `Check out ${attraction.name} in Laos 🇱🇦`;
+
+  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+    text,
+  )}&url=${encodeURIComponent(shareUrl)}`;
+
+  window.open(url, "_blank", "width=600,height=400");
+};
+
+
+const shareToWhatsApp = () => {
+  const text = `Check this out: ${attraction.name} - ${shareUrl}`;
+
+  const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+
+  window.open(url, "_blank");
+};
+
+const copyLink = async () => {
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    alert("Link copied to clipboard!");
+  } catch (err) {
+    console.error("Failed to copy:", err);
+  }
+};
+
+const handleShare = async () => {
+  const url = window.location.href;
+  const title = attraction?.name || "Check this attraction";
+
+  // Native share (mobile / modern browsers)
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title,
+        text: title,
+        url,
+      });
+      return;
+    } catch (err) {
+      console.log("Share cancelled");
+    }
+  }
+
+  // Fallback: open share menu (simple version)
+  const facebook = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+  const twitter = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+    title,
+  )}&url=${encodeURIComponent(url)}`;
+  const whatsapp = `https://wa.me/?text=${encodeURIComponent(
+    title + " " + url,
+  )}`;
+
+  // Open multiple options (or choose one UI later)
+  window.open(facebook, "_blank");
+  window.open(twitter, "_blank");
+  window.open(whatsapp, "_blank");
+};
+
+
+//Handler submit Review
+  const handleSubmitReview = async () => {
+    if (!reviewComment.trim()) return;
+
+    try {
+      const result = await submitReview(attractionId, reviewComment.trim(), reviewRating || undefined);
+      
+      if (result.success) {
+        // Reset form
+        setReviewRating(0);
+        setHoverRating(0);
+        setReviewComment("");
+        if (!isAuthenticated) {
+          setReviewName("");
+        }
+        // Reviews will be refetched by the store
+      } else {
+        alert(t("attraction.reviewSubmitError", "Failed to submit review. Please try again."));
+      }
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      alert(t("attraction.reviewSubmitError", "Failed to submit review. Please try again."));
+    }
   };
 
   const renderStars = (
     rating: number,
-    size: string = "h-4 w-4",
-    interactive: boolean = false
+    size = "h-4 w-4",
+    interactive = false,
   ) => {
     const displayRating = interactive ? hoverRating || reviewRating : rating;
+
     return (
       <div className="flex items-center gap-0.5">
         {[1, 2, 3, 4, 5].map((star) => (
@@ -162,11 +341,13 @@ export default function AttractionDetailPage() {
             onClick={() => interactive && setReviewRating(star)}
             onMouseEnter={() => interactive && setHoverRating(star)}
             onMouseLeave={() => interactive && setHoverRating(0)}
-            className={`${interactive ? "cursor-pointer" : "cursor-default"} transition-colors`}
+            className={`${
+              interactive ? "cursor-pointer" : "cursor-default"
+            } transition-colors`}
           >
             <Star
               className={`${size} ${
-                star <= Math.round(displayRating)
+                star <= displayRating
                   ? "fill-amber-400 text-amber-400"
                   : "text-gray-300"
               }`}
@@ -252,21 +433,24 @@ export default function AttractionDetailPage() {
 
         {/* Thumbnail Strip */}
         {images.length > 1 && (
-          <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
+          <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar snap-x">
             {images.map((img, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentImageIndex(index)}
-                className={`shrink-0 h-16 w-24 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                // Added 'relative' so the Image component knows where its boundaries are
+                className={`relative shrink-0 h-16 w-24 rounded-lg overflow-hidden border-2 transition-all duration-200 snap-start ${
                   index === currentImageIndex
                     ? "border-teal-500 ring-2 ring-teal-500/30"
                     : "border-transparent opacity-70 hover:opacity-100"
                 }`}
               >
-                <img
+                <Image
                   src={img}
                   alt={`Thumbnail ${index + 1}`}
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="96px" // Optimization hint: tells the browser this image is small
+                  className="object-cover"
                 />
               </button>
             ))}
@@ -304,7 +488,7 @@ export default function AttractionDetailPage() {
               <div className="flex items-center gap-2">
                 {renderStars(attraction.rating)}
                 <span className="text-lg font-bold text-gray-900">
-                  {attraction.rating}
+                  {attraction.rating.toFixed(1)}
                 </span>
                 <span className="text-sm text-gray-500">
                   ({attraction.reviewCount})
@@ -344,9 +528,7 @@ export default function AttractionDetailPage() {
               }`}
             >
               <Heart
-                className={`mr-2 h-4 w-4 ${
-                  isFavorite ? "fill-white" : ""
-                }`}
+                className={`mr-2 h-4 w-4 ${isFavorite ? "fill-white" : ""}`}
               />
               {isFavorite
                 ? t("attraction.saved", "Saved")
@@ -354,16 +536,21 @@ export default function AttractionDetailPage() {
             </Button>
             <Button
               variant="outline"
+              onClick={handleShare}
               className="border-gray-200 text-gray-600 hover:text-teal-700 hover:border-teal-300"
             >
               <Share2 className="mr-2 h-4 w-4" />
               {t("attraction.share", "Share")}
             </Button>
-            <Button className="bg-teal-600 hover:bg-teal-700 text-white">
+            <Button
+              onClick={() => setAddToPlanOpen(true)}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
               <Navigation className="mr-2 h-4 w-4" />
               {t("attraction.addToPlan", "Add to Plan")}
             </Button>
             <Button
+              onClick={handleGetDirections}
               variant="outline"
               className="border-gray-200 text-gray-600 hover:text-emerald-700 hover:border-emerald-300"
             >
@@ -440,12 +627,15 @@ export default function AttractionDetailPage() {
           <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
             <div className="text-center">
               <div className="text-4xl font-bold text-gray-900">
-                {averageReviewRating > 0
-                  ? averageReviewRating.toFixed(1)
-                  : attraction.rating}
+                {attraction.rating.toFixed(1)}
               </div>
               <div className="mt-1">
-                {renderStars(averageReviewRating > 0 ? averageReviewRating : attraction.rating, "h-5 w-5")}
+                {renderStars(
+                  averageReviewRating > 0
+                    ? averageReviewRating
+                    : attraction.rating,
+                  "h-5 w-5",
+                )}
               </div>
               <p className="mt-1 text-xs text-gray-500">
                 {attractionReviews.length}{" "}
@@ -455,7 +645,7 @@ export default function AttractionDetailPage() {
             <div className="flex-1">
               {[5, 4, 3, 2, 1].map((starLevel) => {
                 const count = attractionReviews.filter(
-                  (r) => r.rating === starLevel
+                  (r) => r.rating === starLevel,
                 ).length;
                 const percentage =
                   attractionReviews.length > 0
@@ -475,9 +665,7 @@ export default function AttractionDetailPage() {
                         className="h-full rounded-full bg-amber-400"
                       />
                     </div>
-                    <span className="text-xs text-gray-400 w-8">
-                      {count}
-                    </span>
+                    <span className="text-xs text-gray-400 w-8">{count}</span>
                   </div>
                 );
               })}
@@ -505,7 +693,7 @@ export default function AttractionDetailPage() {
                           {review.userName}
                         </span>
                         <span className="text-xs text-gray-400 shrink-0">
-                          {new Date(review.date).toLocaleDateString("en-US", {
+                          {new Date(review.createdAt).toLocaleDateString("en-US", {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
@@ -513,10 +701,10 @@ export default function AttractionDetailPage() {
                         </span>
                       </div>
                       <div className="mt-0.5">
-                        {renderStars(review.rating, "h-3 w-3")}
+                        {renderStars(review.rating ?? 0, "h-3 w-3")}
                       </div>
                       <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                        {review.comment}
+                        {review.content}
                       </p>
                     </div>
                   </motion.div>
@@ -526,7 +714,7 @@ export default function AttractionDetailPage() {
               <p className="text-sm text-gray-500 py-4">
                 {t(
                   "attraction.noReviews",
-                  "No reviews yet. Be the first to review!"
+                  "No reviews yet. Be the first to review!",
                 )}
               </p>
             )}
@@ -554,18 +742,41 @@ export default function AttractionDetailPage() {
               </div>
 
               {/* Name Input */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700 block">
                   {t("attraction.yourName", "Your Name")}
                 </label>
-                <Input
-                  value={reviewName}
-                  onChange={(e) => setReviewName(e.target.value)}
-                  placeholder={t(
-                    "attraction.namePlaceholder",
-                    "Enter your name"
-                  )}
-                />
+
+                {isAuthenticated ? (
+                  // DISPLAY MODE: Show only the name as text if logged in
+                  <div className="flex items-center gap-2 h-10 px-1">
+                    <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-xs">
+                      {user?.name?.charAt(0) || "U"}
+                    </div>
+                    <span className="font-semibold text-gray-900">
+                      {user?.name}
+                    </span>
+                    <Badge
+                      variant="secondary"
+                      className="bg-teal-50 text-teal-600 border-teal-100 text-[10px]"
+                    >
+                      {t("attraction.verified", "Verified")}
+                    </Badge>
+                  </div>
+                ) : (
+                  // INPUT MODE: Show the input field for guests
+                  <div className="relative">
+                    <Input
+                      value={reviewName}
+                      onChange={(e) => setReviewName(e.target.value)}
+                      placeholder={t(
+                        "attraction.namePlaceholder",
+                        "Enter your name",
+                      )}
+                      className="bg-white"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Comment Textarea */}
@@ -578,7 +789,7 @@ export default function AttractionDetailPage() {
                   onChange={(e) => setReviewComment(e.target.value)}
                   placeholder={t(
                     "attraction.reviewPlaceholder",
-                    "Share your experience..."
+                    "Share your experience...",
                   )}
                   rows={4}
                 />
@@ -586,7 +797,7 @@ export default function AttractionDetailPage() {
 
               <Button
                 onClick={handleSubmitReview}
-                disabled={reviewRating === 0 || !reviewComment.trim()}
+                disabled={!reviewComment.trim()}
                 className="bg-teal-600 hover:bg-teal-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="mr-2 h-4 w-4" />
@@ -609,7 +820,7 @@ export default function AttractionDetailPage() {
             {t("attraction.videoReviews", "Video Reviews")}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <motion.div
                 key={i}
                 whileHover={{ scale: 1.02 }}
@@ -654,7 +865,7 @@ export default function AttractionDetailPage() {
             <p className="text-xs text-gray-400 mt-3">
               {t(
                 "attraction.mapPlaceholder",
-                "Interactive map will be displayed here"
+                "Interactive map will be displayed here",
               )}
             </p>
           </div>
@@ -675,6 +886,7 @@ export default function AttractionDetailPage() {
           <div className="flex flex-wrap items-center gap-3">
             <Button
               variant="outline"
+              onClick={shareToFacebook}
               className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
             >
               <ThumbsUp className="mr-2 h-4 w-4" />
@@ -682,6 +894,7 @@ export default function AttractionDetailPage() {
             </Button>
             <Button
               variant="outline"
+              onClick={shareToTwitter}
               className="border-sky-200 text-sky-600 hover:bg-sky-50 hover:border-sky-300"
             >
               <Globe className="mr-2 h-4 w-4" />
@@ -689,6 +902,7 @@ export default function AttractionDetailPage() {
             </Button>
             <Button
               variant="outline"
+              onClick={shareToWhatsApp}
               className="border-green-200 text-green-600 hover:bg-green-50 hover:border-green-300"
             >
               <Phone className="mr-2 h-4 w-4" />
@@ -696,6 +910,7 @@ export default function AttractionDetailPage() {
             </Button>
             <Button
               variant="outline"
+              onClick={copyLink}
               className="border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
             >
               <Share2 className="mr-2 h-4 w-4" />
@@ -707,6 +922,61 @@ export default function AttractionDetailPage() {
 
       {/* Footer */}
       <div className="mt-8">
+        <Dialog open={addToPlanOpen} onOpenChange={setAddToPlanOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add to Travel Plan</DialogTitle>
+              <DialogDescription>
+                Choose a plan to add this attraction.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-2 max-h-60 overflow-y-auto">
+              {plans.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  No plans found. Create one first.
+                </p>
+              ) : (
+                plans.map((plan) => (
+                  <button
+                    key={plan.id}
+                    onClick={() => setSelectedPlanId(plan.id)}
+                    className={`w-full text-left p-3 rounded-lg border transition ${
+                      selectedPlanId === plan.id
+                        ? "border-teal-500 bg-teal-50"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <div className="font-medium">{plan.name}</div>
+                    <div className="text-xs text-gray-500">
+                      {plan.attractionIds.length} places
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAddToPlanOpen(false);
+                  setSelectedPlanId("");
+                }}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                onClick={handleAddToPlan}
+                disabled={!selectedPlanId}
+                className="bg-teal-600 text-white"
+              >
+                Add
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Footer />
       </div>
     </div>

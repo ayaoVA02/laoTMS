@@ -288,6 +288,7 @@ function AttractionsContent() {
                   key={attraction.id}
                   attraction={attraction}
                   index={index}
+
                 />
               ))}
             </motion.div>

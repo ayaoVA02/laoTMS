@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Home, Compass, Route, Map, LayoutDashboard } from "lucide-react";
+import { Home, Compass, Route, Map, LayoutDashboard, Heart } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
@@ -11,6 +11,7 @@ const tabs = [
   { href: "/", icon: Home, labelKey: "nav.home" },
   { href: "/attractions", icon: Compass, labelKey: "nav.attractions" },
   { href: "/travel-plans", icon: Route, labelKey: "nav.travelPlans" },
+  { href: "/favorites", icon: Heart, labelKey: "nav.favorites" },
   { href: "/map", icon: Map, labelKey: "nav.map" },
   { href: "/dashboard", icon: LayoutDashboard, labelKey: "nav.dashboard" },
 ];

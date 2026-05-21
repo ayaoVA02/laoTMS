@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/auth-store';
 
 export interface Attraction {
   id: string;
@@ -110,9 +111,10 @@ interface AttractionState {
   setSelectedAttraction: (a: Attraction | null) => void;
   setSearchQuery: (q: string) => void;
   setSelectedCategory: (c: string) => void;
-  toggleFavorite: (id: string) => void;
+  toggleFavorite: (id: string) => Promise<void>;
   filterAttractions: () => void;
   fetchAttractions: () => Promise<void>;
+  fetchSingleAttraction: (id: string) => Promise<void>;
   fetchTypes: () => Promise<void>;
   fetchFavorites: (userId: string) => Promise<void>;
   addFavorite: (userId: string, attractionId: string) => Promise<void>;
@@ -139,12 +141,17 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
     get().filterAttractions();
   },
 
-  toggleFavorite: (id) =>
-    set((s) => ({
-      favorites: s.favorites.includes(id)
-        ? s.favorites.filter((f) => f !== id)
-        : [...s.favorites, id],
-    })),
+  toggleFavorite: async (id) => {
+    const user = useAuthStore.getState().user;
+    if (!user) return;
+
+    const { favorites } = get();
+    if (favorites.includes(id)) {
+      await get().removeFavorite(user.id, id);
+    } else {
+      await get().addFavorite(user.id, id);
+    }
+  },
 
   filterAttractions: () => {
     const { attractions, searchQuery, selectedCategory } = get();
@@ -203,6 +210,67 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
 
       set({ attractions: mapped, filteredAttractions: mapped, loading: false });
     } catch {
+      set({ loading: false });
+    }
+  },
+
+  fetchSingleAttraction: async (attractionId: string) => {
+    set({ loading: true });
+
+    try {
+      const { data: attractionRow, error } = await supabase
+        .from('attractions')
+        .select('*')
+        .eq('attraction_id', attractionId)
+        .single();
+
+      if (error || !attractionRow) {
+        console.error('Error fetching attraction rating:', error);
+        set({ loading: false });
+        return;
+      }
+
+      const { data: imageRows } = await supabase
+        .from('attraction_images')
+        .select('attraction_id, image_url, display_order')
+        .eq('attraction_id', attractionId)
+        .order('display_order', { ascending: true });
+
+      const images = (imageRows || []).map((img) => img.image_url);
+      const updatedAttraction = mapAttraction(attractionRow, images);
+
+      set((state) => ({
+        attractions: state.attractions.some((attraction) => attraction.id === attractionId)
+          ? state.attractions.map((attraction) =>
+              attraction.id === attractionId
+                ? {
+                    ...updatedAttraction,
+                    entrepreneurName: attraction.entrepreneurName,
+                  }
+                : attraction
+            )
+          : [updatedAttraction, ...state.attractions],
+        filteredAttractions: state.filteredAttractions.some((attraction) => attraction.id === attractionId)
+          ? state.filteredAttractions.map((attraction) =>
+              attraction.id === attractionId
+                ? {
+                    ...updatedAttraction,
+                    entrepreneurName: attraction.entrepreneurName,
+                  }
+                : attraction
+            )
+          : [updatedAttraction, ...state.filteredAttractions],
+        selectedAttraction:
+          state.selectedAttraction?.id === attractionId
+            ? {
+                ...updatedAttraction,
+                entrepreneurName: state.selectedAttraction.entrepreneurName,
+              }
+            : updatedAttraction,
+        loading: false,
+      }));
+    } catch (err) {
+      console.error('Exception fetching attraction rating:', err);
       set({ loading: false });
     }
   },

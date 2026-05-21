@@ -28,6 +28,7 @@ const navLinks = [
   { href: "/", labelKey: "nav.home" },
   { href: "/attractions", labelKey: "nav.attractions" },
   { href: "/travel-plans", labelKey: "nav.travelPlans" },
+  { href: "/favorites", labelKey: "nav.favorites" },
   { href: "/map", labelKey: "nav.map" },
   { href: "/dashboard", labelKey: "nav.dashboard" },
 ];

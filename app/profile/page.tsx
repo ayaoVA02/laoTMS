@@ -70,8 +70,8 @@ const itemVariants = {
 export default function ProfilePage() {
   const { t, i18n } = useTranslation();
   const { user, isAuthenticated, logout } = useAuthStore();
-  const { favorites = [] } = useAttractionStore();
-  const { plans = [] } = useTravelPlanStore();
+  const { favorites = [], fetchFavorites } = useAttractionStore();
+  const { plans = [], fetchPlans } = useTravelPlanStore();
   const { unreadCount } = useNotificationStore();
   const { language, setLanguage } = useAppStore();
   const { theme, setTheme } = useTheme();
@@ -99,6 +99,13 @@ export default function ProfilePage() {
       });
     }
   }, [user]);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchPlans(user.id);
+      fetchFavorites(user.id);
+    }
+  }, [isAuthenticated, user, fetchPlans, fetchFavorites]);
 
   if (!mounted) return null;
 
