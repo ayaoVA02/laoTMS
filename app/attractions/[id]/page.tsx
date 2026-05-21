@@ -488,7 +488,7 @@ const handleShare = async () => {
               <div className="flex items-center gap-2">
                 {renderStars(attraction.rating)}
                 <span className="text-lg font-bold text-gray-900">
-                  {attraction.rating}
+                  {attraction.rating.toFixed(1)}
                 </span>
                 <span className="text-sm text-gray-500">
                   ({attraction.reviewCount})
@@ -627,9 +627,7 @@ const handleShare = async () => {
           <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
             <div className="text-center">
               <div className="text-4xl font-bold text-gray-900">
-                {averageReviewRating > 0
-                  ? averageReviewRating.toFixed(1)
-                  : attraction.rating}
+                {attraction.rating.toFixed(1)}
               </div>
               <div className="mt-1">
                 {renderStars(

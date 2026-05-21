@@ -215,6 +215,8 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
   },
 
   fetchSingleAttraction: async (attractionId: string) => {
+    set({ loading: true });
+
     try {
       const { data: attractionRow, error } = await supabase
         .from('attractions')
@@ -224,6 +226,7 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
 
       if (error || !attractionRow) {
         console.error('Error fetching attraction rating:', error);
+        set({ loading: false });
         return;
       }
 
@@ -237,32 +240,38 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
       const updatedAttraction = mapAttraction(attractionRow, images);
 
       set((state) => ({
-        attractions: state.attractions.map((attraction) =>
-          attraction.id === attractionId
-            ? {
-                ...updatedAttraction,
-                entrepreneurName: attraction.entrepreneurName,
-              }
-            : attraction
-        ),
-        filteredAttractions: state.filteredAttractions.map((attraction) =>
-          attraction.id === attractionId
-            ? {
-                ...updatedAttraction,
-                entrepreneurName: attraction.entrepreneurName,
-              }
-            : attraction
-        ),
+        attractions: state.attractions.some((attraction) => attraction.id === attractionId)
+          ? state.attractions.map((attraction) =>
+              attraction.id === attractionId
+                ? {
+                    ...updatedAttraction,
+                    entrepreneurName: attraction.entrepreneurName,
+                  }
+                : attraction
+            )
+          : [updatedAttraction, ...state.attractions],
+        filteredAttractions: state.filteredAttractions.some((attraction) => attraction.id === attractionId)
+          ? state.filteredAttractions.map((attraction) =>
+              attraction.id === attractionId
+                ? {
+                    ...updatedAttraction,
+                    entrepreneurName: attraction.entrepreneurName,
+                  }
+                : attraction
+            )
+          : [updatedAttraction, ...state.filteredAttractions],
         selectedAttraction:
           state.selectedAttraction?.id === attractionId
             ? {
                 ...updatedAttraction,
                 entrepreneurName: state.selectedAttraction.entrepreneurName,
               }
-            : state.selectedAttraction,
+            : updatedAttraction,
+        loading: false,
       }));
     } catch (err) {
       console.error('Exception fetching attraction rating:', err);
+      set({ loading: false });
     }
   },
 
