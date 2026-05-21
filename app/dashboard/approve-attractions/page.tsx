@@ -1,49 +1,329 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckSquare, CheckCircle, XCircle, Clock, Building2, MapPin, Star, Eye, X, Calendar, Tag } from "lucide-react";
+import {
+  CheckCircle,
+  Clock,
+  Eye,
+  MapPin,
+  Building2,
+  Star,
+  X,
+  Image as ImageIcon,
+  Video,
+  Navigation,
+  RefreshCw,
+  BadgeCheck,
+  AlertTriangle,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { attractions } from "@/data/attractions";
+import toast from "react-hot-toast";
 import DashboardLayout from "@/components/shared/dashboard-layout";
+import { supabase } from "@/lib/supabase";
+import { useAuthStore } from "@/stores/auth-store";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { getR2Url } from "@/lib/upload";
 
-const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.06 } } };
-const itemVariants = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+};
+
+type AttractionStatus = "pending" | "approved" | "rejected" | "draft" | string;
+
+type AttractionListItem = {
+  attraction_id: string;
+  user_id: string;
+  type_id: string | null;
+  name_en: string | null;
+  name_la: string | null;
+  description: string | null;
+  province: string | null;
+  district: string | null;
+  village: string | null;
+  location: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  open_time: string | null;
+  close_time: string | null;
+  entry_fee_foreigner: number | null;
+  is_free_entry: boolean | null;
+  best_time_visit: string | null;
+  activity: string | null;
+  license: string | null;
+  thumbnail_image: string | null;
+  vdo_reviews: string | null;
+  social_share: boolean | null;
+  has_parking: boolean | null;
+  is_free_parking: boolean | null;
+  parking_price: number | null;
+  has_restaurant: boolean | null;
+  has_accommodation: boolean | null;
+  acc_price: number | null;
+  has_internet: boolean | null;
+  is_free_wifi: boolean | null;
+  rating: number | null;
+  review_count: number | null;
+  featured: boolean | null;
+  status: AttractionStatus;
+  created_at: string | null;
+};
+
+type MediaState = {
+  images: string[];
+  videos: string[];
+  loading: boolean;
+};
+
+const statusBadge: Record<string, string> = {
+  approved: "bg-emerald-500/15 text-emerald-600 border-emerald-500/25",
+  pending: "bg-amber-500/15 text-amber-600 border-amber-500/25",
+  rejected: "bg-red-500/15 text-red-600 border-red-500/25",
+};
+
+function formatDate(dateStr?: string | null) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return String(dateStr);
+  return d.toISOString().split("T")[0];
+}
+
+function buildFacilities(a: AttractionListItem) {
+  const facilities: string[] = [];
+  if (a.has_parking) facilities.push("Parking");
+  if (a.is_free_parking) facilities.push("Free Parking");
+  if (a.parking_price && a.parking_price > 0) facilities.push(`Parking: ${a.parking_price.toLocaleString()} LAK`);
+  if (a.has_restaurant) facilities.push("Restaurant / Food");
+  if (a.has_accommodation) facilities.push("Accommodation");
+  if (a.acc_price && a.acc_price > 0) facilities.push(`Accommodation: ${a.acc_price.toLocaleString()} LAK`);
+  if (a.has_internet) facilities.push("Internet / WiFi");
+  if (a.is_free_wifi) facilities.push("Free WiFi");
+  if (a.is_free_entry) facilities.push("Free Entry");
+  if (a.activity) {
+    a.activity
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .forEach((x) => {
+        if (!facilities.includes(x)) facilities.push(x);
+      });
+  }
+  return facilities;
+}
 
 export default function ApproveAttractionsPage() {
   const { t } = useTranslation();
-  const [mounted, setMounted] = useState(false);
-  const [localAttractions, setLocalAttractions] = useState(attractions || []);
-  const [selectedAttraction, setSelectedAttraction] = useState<typeof attractions[0] | null>(null);
-  useEffect(() => { setMounted(true); }, []);
+  const { user } = useAuthStore();
 
-  const pending = localAttractions.filter((a) => a.status === "pending");
-  const handleApprove = (id: string) => {
-    setLocalAttractions((prev) => prev.map((a) => a.id === id ? { ...a, status: "approved" as const } : a));
-    if (selectedAttraction?.id === id) setSelectedAttraction(null);
+  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [filterStatus, setFilterStatus] = useState<"pending" | "approved" | "rejected">("pending");
+  const [search, setSearch] = useState("");
+
+  const [rows, setRows] = useState<AttractionListItem[]>([]);
+  const [entrepreneurNameMap, setEntrepreneurNameMap] = useState<Record<string, string>>({});
+  const [typeNameMap, setTypeNameMap] = useState<Record<string, string>>({});
+
+  const [selected, setSelected] = useState<AttractionListItem | null>(null);
+  const [media, setMedia] = useState<MediaState>({ images: [], videos: [], loading: false });
+
+  useEffect(() => setMounted(true), []);
+
+  const counts = useMemo(() => {
+    const c = { pending: 0, approved: 0, rejected: 0 };
+    rows.forEach((r) => {
+      if (r.status === "pending") c.pending += 1;
+      else if (r.status === "approved") c.approved += 1;
+      else if (r.status === "rejected") c.rejected += 1;
+    });
+    return c;
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows
+      .filter((r) => r.status === filterStatus)
+      .filter((r) => {
+        if (!q) return true;
+        const name = (r.name_en || "").toLowerCase();
+        const location = (r.location || "").toLowerCase();
+        const province = (r.province || "").toLowerCase();
+        return name.includes(q) || location.includes(q) || province.includes(q);
+      });
+  }, [rows, filterStatus, search]);
+
+  const loadList = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("attractions")
+        .select(
+          "attraction_id, user_id, type_id, name_en, name_la, description, province, district, village, location, latitude, longitude, open_time, close_time, entry_fee_foreigner, is_free_entry, best_time_visit, activity, license, thumbnail_image, vdo_reviews, social_share, has_parking, is_free_parking, parking_price, has_restaurant, has_accommodation, acc_price, has_internet, is_free_wifi, rating, review_count, featured, status, created_at"
+        )
+        .neq("status", "draft")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      const list = (data || []) as AttractionListItem[];
+      setRows(list);
+
+      const userIds = Array.from(new Set(list.map((x) => x.user_id).filter(Boolean)));
+      if (userIds.length > 0) {
+        const { data: entrepreneurs } = await supabase
+          .from("entrepreneurs")
+          .select("user_id, first_name, last_name")
+          .in("user_id", userIds);
+
+        const map: Record<string, string> = {};
+        (entrepreneurs || []).forEach((e: any) => {
+          map[e.user_id] = `${e.first_name || ""} ${e.last_name || ""}`.trim() || e.user_id;
+        });
+        setEntrepreneurNameMap(map);
+      }
+
+      const typeIds = Array.from(new Set(list.map((x) => x.type_id).filter(Boolean))) as string[];
+      if (typeIds.length > 0) {
+        const { data: types } = await supabase.from("types").select("type_id, name_en").in("type_id", typeIds);
+        const map: Record<string, string> = {};
+        (types || []).forEach((tt: any) => (map[tt.type_id] = tt.name_en));
+        setTypeNameMap(map);
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message ?? "Failed to load attractions");
+    } finally {
+      setLoading(false);
+    }
   };
-  const handleReject = (id: string) => {
-    setLocalAttractions((prev) => prev.map((a) => a.id === id ? { ...a, status: "rejected" as const } : a));
-    if (selectedAttraction?.id === id) setSelectedAttraction(null);
+
+  const loadMedia = async (attractionId: string, thumb?: string | null, vdo?: string | null) => {
+    setMedia({ images: [], videos: [], loading: true });
+    try {
+      const [{ data: imgRows }, { data: vidRows }] = await Promise.all([
+        supabase
+          .from("attraction_images")
+          .select("image_url, display_order")
+          .eq("attraction_id", attractionId)
+          .order("display_order", { ascending: true }),
+        supabase
+          .from("attraction_videos")
+          .select("video_url, display_order")
+          .eq("attraction_id", attractionId)
+          .order("display_order", { ascending: true }),
+      ]);
+
+      const imageUrls = [
+        ...(thumb ? [thumb] : []),
+        ...((imgRows || []) as any[]).map((x) => x.image_url).filter(Boolean),
+      ].filter((x, idx, arr) => arr.indexOf(x) === idx);
+
+      const videoUrls = [
+        ...(vdo ? [vdo] : []),
+        ...((vidRows || []) as any[]).map((x) => x.video_url).filter(Boolean),
+      ].filter((x, idx, arr) => arr.indexOf(x) === idx);
+
+      setMedia({ images: imageUrls, videos: videoUrls, loading: false });
+    } catch (err) {
+      console.error(err);
+      setMedia({ images: thumb ? [thumb] : [], videos: vdo ? [vdo] : [], loading: false });
+    }
+  };
+
+  const handleSelect = async (row: AttractionListItem) => {
+    setSelected(row);
+    await loadMedia(row.attraction_id, row.thumbnail_image, row.vdo_reviews);
+  };
+
+  const updateStatus = async (id: string, status: "approved" | "rejected") => {
+    try {
+      const { error } = await supabase.from("attractions").update({ status }).eq("attraction_id", id);
+      if (error) throw error;
+      setRows((prev) => prev.map((r) => (r.attraction_id === id ? { ...r, status } : r)));
+      toast.success(status === "approved" ? "Approved" : "Rejected");
+      if (selected?.attraction_id === id) {
+        setSelected((p) => (p ? { ...p, status } : p));
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message ?? "Failed to update status");
+    }
+  };
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (!user) return;
+    if (user.role !== "STAFF" && user.role !== "ADMIN") return;
+    loadList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, user?.id, user?.role]);
+
+  useEffect(() => {
+    setSelected(null);
+    setMedia({ images: [], videos: [], loading: false });
+  }, [filterStatus]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadList();
+    setRefreshing(false);
   };
 
   if (!mounted) return null;
 
+  if (!user) {
+    return (
+      <DashboardLayout title={t("sidebar.approveAttractions")} subtitle="Review and approve submitted attractions">
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-6 text-center text-sm text-muted-foreground">
+            <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+            Please login as staff to approve attractions.
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
+  if (user.role !== "STAFF" && user.role !== "ADMIN") {
+    return (
+      <DashboardLayout title={t("sidebar.approveAttractions")} subtitle="Review and approve submitted attractions">
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-6 text-center text-sm text-muted-foreground">
+            <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+            Only staff can access this page.
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout title={t("sidebar.approveAttractions")} subtitle="Review and approve submitted attractions">
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
-        {/* Summary */}
+        {/* Status filters (clickable) */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Pending", count: pending.length, icon: Clock, color: "text-amber-500" },
-            { label: "Approved", count: localAttractions.filter((a) => a.status === "approved").length, icon: CheckCircle, color: "text-emerald-500" },
-            { label: "Rejected", count: localAttractions.filter((a) => a.status === "rejected").length, icon: XCircle, color: "text-red-500" },
+            { key: "pending" as const, label: "Pending", count: counts.pending, icon: Clock, color: "text-amber-500" },
+            { key: "approved" as const, label: "Approved", count: counts.approved, icon: CheckCircle, color: "text-emerald-500" },
+            { key: "rejected" as const, label: "Rejected", count: counts.rejected, icon: AlertTriangle, color: "text-red-500" },
           ].map((s) => (
-            <motion.div key={s.label} variants={itemVariants}>
-              <Card className="border-0 shadow-md text-center">
+            <motion.div key={s.key} variants={itemVariants}>
+              <Card
+                className={`border-0 shadow-md text-center cursor-pointer hover:shadow-lg transition-shadow ${
+                  filterStatus === s.key ? "ring-2 ring-teal-500/50" : ""
+                }`}
+                onClick={() => setFilterStatus(s.key)}
+              >
                 <CardContent className="p-3 sm:p-4">
                   <s.icon className={`w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 ${s.color}`} />
                   <p className="text-lg sm:text-2xl font-bold">{s.count}</p>
@@ -55,40 +335,92 @@ export default function ApproveAttractionsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
-          {/* Pending List */}
+          {/* List */}
           <motion.div variants={itemVariants} className="lg:col-span-2">
             <Card className="border-0 shadow-md h-full">
-              <CardHeader>
-                <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
-                  <CheckSquare className="w-5 h-5 text-teal-500" />
-                  Pending Review ({pending.length})
-                </CardTitle>
+              <CardHeader className="pb-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-teal-500" />
+                    {filterStatus[0].toUpperCase() + filterStatus.slice(1)} ({filtered.length})
+                  </CardTitle>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:flex-none">
+                      <Input
+                        placeholder="Search name / location / province..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-9 px-3"
+                      onClick={handleRefresh}
+                      disabled={refreshing || loading}
+                      title="Refresh"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
-                {pending.length === 0 ? (
-                  <div className="text-center py-10">
-                    <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">All attractions have been reviewed</p>
-                  </div>
+                {loading ? (
+                  <div className="py-10 text-center text-sm text-muted-foreground">Loading...</div>
+                ) : filtered.length === 0 ? (
+                  <div className="py-10 text-center text-sm text-muted-foreground">No attractions found.</div>
                 ) : (
                   <div className="space-y-2">
                     <AnimatePresence>
-                      {pending.map((a) => (
+                      {filtered.map((a) => (
                         <motion.div
-                          key={a.id}
+                          key={a.attraction_id}
                           layout
                           exit={{ opacity: 0, x: -20 }}
-                          className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${selectedAttraction?.id === a.id ? "border-teal-500 bg-teal-500/5" : "bg-card hover:border-teal-500/30"}`}
-                          onClick={() => setSelectedAttraction(a)}
+                          className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                            selected?.attraction_id === a.attraction_id
+                              ? "border-teal-500 bg-teal-500/5"
+                              : "bg-card hover:border-teal-500/30"
+                          }`}
+                          onClick={() => handleSelect(a)}
                         >
                           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500/20 to-emerald-500/20 border border-teal-500/20 flex items-center justify-center shrink-0 overflow-hidden">
-                            {a.images[0] ? <img src={a.images[0]} alt={a.name} className="w-full h-full object-cover" /> : <Building2 className="w-4 h-4 text-teal-500" />}
+                            {a.thumbnail_image ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={getR2Url(a.thumbnail_image)} alt={a.name_en || ""} className="w-full h-full object-cover" />
+                            ) : (
+                              <Building2 className="w-4 h-4 text-teal-500" />
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs sm:text-sm font-medium truncate">{a.name}</p>
-                            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{a.location} - {a.category}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm font-medium truncate">{a.name_en || "Untitled"}</p>
+                              <Badge variant="outline" className={`${statusBadge[String(a.status)] || ""} text-[10px]`}>
+                                {String(a.status)}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <span className="text-xs text-muted-foreground truncate">{a.location || "-"}</span>
+                              <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+                              <span className="text-xs font-medium">{Number(a.rating || 0).toFixed(1)}</span>
+                              <span className="text-[10px] text-muted-foreground">({Number(a.review_count || 0)})</span>
+                            </div>
                           </div>
-                          <Eye className="w-4 h-4 text-muted-foreground shrink-0" />
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelect(a);
+                            }}
+                            title="View"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
                         </motion.div>
                       ))}
                     </AnimatePresence>
@@ -98,113 +430,192 @@ export default function ApproveAttractionsPage() {
             </Card>
           </motion.div>
 
-          {/* Detail Panel */}
+          {/* Details */}
           <motion.div variants={itemVariants} className="lg:col-span-3">
-            <Card className="border-0 shadow-md h-full">
-              {selectedAttraction ? (
+            <Card className="border-0 shadow-md overflow-hidden">
+              {selected ? (
                 <>
-                  {/* Image Gallery */}
-                  <div className="relative aspect-video overflow-hidden rounded-t-xl">
-                    {selectedAttraction.images[0] ? (
-                      <img src={selectedAttraction.images[0]} alt={selectedAttraction.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-teal-500/20 to-emerald-500/20 flex items-center justify-center">
-                        <Building2 className="w-12 h-12 text-teal-500/50" />
+                  <CardHeader className="pb-3 border-b">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <CardTitle className="text-base sm:text-lg font-semibold truncate">
+                          {selected.name_en || "Untitled"}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Submitted: {formatDate(selected.created_at)}{" "}
+                          {entrepreneurNameMap[selected.user_id] ? `• ${entrepreneurNameMap[selected.user_id]}` : ""}
+                        </p>
                       </div>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-3 left-4 right-4">
-                      <h2 className="text-lg sm:text-xl font-bold text-white">{selectedAttraction.name}</h2>
-                      <div className="flex items-center gap-2 mt-1">
-                        <MapPin className="w-3.5 h-3.5 text-teal-300" />
-                        <span className="text-xs text-teal-200">{selectedAttraction.location}</span>
-                      </div>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelected(null)} title="Close">
+                        <X className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <button onClick={() => setSelectedAttraction(null)} className="absolute top-3 right-3 p-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors">
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Thumbnail row */}
-                  {selectedAttraction.images.length > 1 && (
-                    <div className="flex gap-1.5 p-3 overflow-x-auto">
-                      {selectedAttraction.images.map((img, i) => (
-                        <div key={i} className="w-14 h-10 rounded-md overflow-hidden shrink-0 border border-border">
-                          <img src={img} alt="" className="w-full h-full object-cover" />
-                        </div>
-                      ))}
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      <Badge variant="outline" className="text-[10px]">
+                        Type: {selected.type_id ? typeNameMap[selected.type_id] || selected.type_id : "-"}
+                      </Badge>
+                      <Badge variant="outline" className={`${statusBadge[String(selected.status)] || ""} text-[10px]`}>
+                        {String(selected.status)}
+                      </Badge>
+                      {selected.featured ? (
+                        <Badge variant="outline" className="text-[10px] bg-teal-500/10 border-teal-500/25 text-teal-600">
+                          <BadgeCheck className="w-3 h-3 mr-1" />
+                          Featured
+                        </Badge>
+                      ) : null}
                     </div>
-                  )}
+                  </CardHeader>
 
                   <CardContent className="p-4 sm:p-5 space-y-4">
-                    {/* Meta row */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/25 text-[10px]">{selectedAttraction.category}</Badge>
-                      <Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/25 text-[10px]">Pending</Badge>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                        <span className="text-xs font-medium">{selectedAttraction.rating}</span>
-                        <span className="text-[10px] text-muted-foreground">({selectedAttraction.reviewCount})</span>
+                    {/* Media */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Media</h4>
+                        {media.loading && <span className="text-[10px] text-muted-foreground">Loading...</span>}
                       </div>
+
+                      {media.images.length === 0 && media.videos.length === 0 ? (
+                        <div className="p-4 rounded-xl bg-muted/40 border border-dashed text-center text-xs text-muted-foreground">
+                          <ImageIcon className="w-6 h-6 mx-auto mb-2 text-muted-foreground/60" />
+                          No media attached.
+                        </div>
+                      ) : (
+                        <>
+                          {media.images.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-1.5 text-xs font-medium mb-2">
+                                <ImageIcon className="w-4 h-4 text-teal-500" />
+                                Images ({media.images.length})
+                              </div>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {media.images.slice(0, 9).map((img) => (
+                                  <div key={img} className="rounded-xl overflow-hidden border bg-black/5 aspect-[4/3]">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={getR2Url(img)} alt="" className="w-full h-full object-cover" />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {media.videos.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-1.5 text-xs font-medium mb-2">
+                                <Video className="w-4 h-4 text-teal-500" />
+                                Videos ({media.videos.length})
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {media.videos.slice(0, 4).map((v) => (
+                                  <div key={v} className="rounded-xl overflow-hidden border bg-black">
+                                    <video src={getR2Url(v)} controls className="w-full h-44 object-cover" />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
 
                     {/* Description */}
                     <div>
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Description</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{selectedAttraction.description}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                        {selected.description || "-"}
+                      </p>
                     </div>
 
-                    {/* Details grid */}
+                    {/* Info grid */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-3 rounded-xl bg-muted/50">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Price</p>
-                        <p className="text-sm font-semibold mt-0.5">{selectedAttraction.price.toLocaleString()} LAK</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Address / Direction</p>
+                        <p className="text-sm font-semibold mt-0.5 line-clamp-2">{selected.location || "-"}</p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-muted/50">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Province</p>
+                        <p className="text-sm font-semibold mt-0.5 line-clamp-1">{selected.province || "-"}</p>
                       </div>
                       <div className="p-3 rounded-xl bg-muted/50">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Hours</p>
-                        <p className="text-sm font-semibold mt-0.5">{selectedAttraction.openTime} - {selectedAttraction.closeTime}</p>
+                        <p className="text-sm font-semibold mt-0.5">
+                          {String(selected.open_time || "08:00").substring(0, 5)} - {String(selected.close_time || "17:00").substring(0, 5)}
+                        </p>
                       </div>
                       <div className="p-3 rounded-xl bg-muted/50">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Calendar className="w-3 h-3" />Submitted</p>
-                        <p className="text-sm font-semibold mt-0.5">{selectedAttraction.createdAt}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entry fee (Foreigner)</p>
+                        <p className="text-sm font-semibold mt-0.5">
+                          {selected.is_free_entry ? "Free" : `${Number(selected.entry_fee_foreigner || 0).toLocaleString()} LAK`}
+                        </p>
                       </div>
-                      <div className="p-3 rounded-xl bg-muted/50">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Tag className="w-3 h-3" />Entrepreneur</p>
-                        <p className="text-sm font-semibold mt-0.5 truncate">{selectedAttraction.entrepreneurName}</p>
+                    </div>
+
+                    {/* Coordinates */}
+                    <div className="p-3 rounded-xl bg-muted/40 border">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Coordinates</div>
+                        {typeof selected.latitude === "number" && typeof selected.longitude === "number" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8"
+                            onClick={() => window.open(`https://www.google.com/maps?q=${selected.latitude},${selected.longitude}`, "_blank")}
+                          >
+                            <Navigation className="w-3.5 h-3.5 mr-1.5" />
+                            Open Map
+                          </Button>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 font-mono text-xs">
+                        Lat: {selected.latitude ?? "-"} • Lng: {selected.longitude ?? "-"}
                       </div>
                     </div>
 
                     {/* Facilities */}
-                    {selectedAttraction.facilities.length > 0 && (
+                    {buildFacilities(selected).length > 0 ? (
                       <div>
                         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Facilities</h4>
                         <div className="flex flex-wrap gap-1.5">
-                          {selectedAttraction.facilities.map((f) => (
-                            <Badge key={f} variant="outline" className="text-[10px]">{f}</Badge>
+                          {buildFacilities(selected).map((f) => (
+                            <Badge key={f} variant="outline" className="text-[10px]">
+                              {f}
+                            </Badge>
                           ))}
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
-                    {/* Action buttons */}
+                    {/* Actions */}
                     <div className="flex items-center gap-2 pt-2 border-t">
-                      <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleApprove(selectedAttraction.id)}>
+                      <Button
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={selected.status === "approved"}
+                        onClick={() => updateStatus(selected.attraction_id, "approved")}
+                      >
                         <CheckCircle className="w-4 h-4 mr-1.5" />
                         Approve
                       </Button>
-                      <Button variant="destructive" className="flex-1" onClick={() => handleReject(selectedAttraction.id)}>
-                        <XCircle className="w-4 h-4 mr-1.5" />
+                      <Button
+                        variant="destructive"
+                        className="flex-1"
+                        disabled={selected.status === "rejected"}
+                        onClick={() => updateStatus(selected.attraction_id, "rejected")}
+                      >
+                        <AlertTriangle className="w-4 h-4 mr-1.5" />
                         Reject
                       </Button>
+                    </div>
+                    <div className="pt-2 text-[10px] text-muted-foreground flex items-center gap-2">
+                      <Eye className="w-3.5 h-3.5" />
+                      Draft items are hidden from this page.
                     </div>
                   </CardContent>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center py-16 sm:py-24 text-center">
-                  <Eye className="w-12 h-12 text-muted-foreground/20 mb-3" />
-                  <p className="text-sm text-muted-foreground">Select an attraction to preview</p>
-                  <p className="text-xs text-muted-foreground mt-1">Click on any pending item from the list</p>
-                </div>
+                <CardContent className="p-8 sm:p-12 text-center">
+                  <Eye className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">Select an attraction to view details</p>
+                  <p className="text-xs text-muted-foreground mt-1">Default filter is Pending</p>
+                </CardContent>
               )}
             </Card>
           </motion.div>
