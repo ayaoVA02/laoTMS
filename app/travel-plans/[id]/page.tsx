@@ -13,6 +13,7 @@ import {
   Plus,
   Heart,
   ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTravelPlanStore } from "@/stores/travel-plan-store";
@@ -27,7 +28,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
 
-// 1. Dynamic Map Component Wrapper to totally circumvent SSR and prevent "L is not defined"
+
 const DynamicMap = dynamic(
   () =>
     Promise.resolve(function MapComponent({
@@ -39,61 +40,112 @@ const DynamicMap = dynamic(
       userLocation: [number, number] | null;
       planAttractions: Attraction[];
     }) {
-      // Safely require inside the client-only block
       const L = require("leaflet");
       require("leaflet-routing-machine");
-      const { MapContainer, TileLayer, Marker, Popup, useMap } = require("react-leaflet");
+
+      const {
+        MapContainer,
+        TileLayer,
+        Marker,
+        Popup,
+        useMap,
+      } = require("react-leaflet");
+
+      const [satellite, setSatellite] =
+        useState(false);
 
       const attractionIcon = new L.Icon({
-        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        iconUrl:
+          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+        shadowUrl:
+          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
         iconSize: [25, 41],
       });
 
+
       const userIcon = new L.DivIcon({
-        html: `<div style="width:18px;height:18px;background:#2563eb;border-radius:50%;border:4px solid white;box-shadow:0 0 12px rgba(37,99,235,.5);"></div>`,
+        html: `
+          <div style="
+            width:18px;
+            height:18px;
+            background:#2563eb;
+            border-radius:50%;
+            border:4px solid white;
+            box-shadow:0 0 12px rgba(37,99,235,.5);
+          "></div>
+        `,
         className: "",
       });
 
-      // Internal sub-component to bind the routing logic securely
-      function RoutingMachine({ points }: { points: [number, number][] }) {
+      function RoutingMachine({
+        points,
+      }: {
+        points: [number, number][];
+      }) {
         const map = useMap();
-        const routingControlRef = useRef<any>(null);
+        const routingControlRef =
+          useRef<any>(null);
 
         useEffect(() => {
-          if (!map || !points || points.length < 2) return;
+          if (!map || points.length < 2)
+            return;
 
-          try {
-            // Remove existing routing control if any
-            if (routingControlRef.current && map) {
-              map.removeControl(routingControlRef.current);
-              routingControlRef.current = null;
-            }
+          if (routingControlRef.current) {
+            map.removeControl(
+              routingControlRef.current
+            );
+            routingControlRef.current =
+              null;
+          }
 
-            // Create new routing control
-            routingControlRef.current = L.Routing.control({
-              waypoints: points.map((p) => L.latLng(p[0], p[1])),
+          routingControlRef.current =
+            L.Routing.control({
+              waypoints: points.map((p) =>
+                L.latLng(p[0], p[1])
+              ),
+
               routeWhileDragging: false,
               addWaypoints: false,
               draggableWaypoints: false,
               fitSelectedRoutes: true,
+
               show: false,
+              collapsible: true,
+
+              createMarker: () => null,
+
               lineOptions: {
-                styles: [{ color: "#0d9488", weight: 6, opacity: 0.85 }],
+                styles: [
+                  {
+                    color: "#0d9488",
+                    weight: 6,
+                    opacity: 0.9,
+                  },
+                ],
               },
-            }).addTo(map);
-          } catch (error) {
-            console.warn("Routing control error:", error);
+            });
+
+          routingControlRef.current.addTo(
+            map
+          );
+
+          const container =
+            routingControlRef.current.getContainer();
+
+          if (container) {
+            container.style.display =
+              "none";
           }
 
           return () => {
-            try {
-              if (routingControlRef.current && map) {
-                map.removeControl(routingControlRef.current);
-                routingControlRef.current = null;
-              }
-            } catch (error) {
-              console.warn("Routing cleanup error:", error);
+            if (
+              routingControlRef.current
+            ) {
+              map.removeControl(
+                routingControlRef.current
+              );
+              routingControlRef.current =
+                null;
             }
           };
         }, [map, points]);
@@ -102,42 +154,124 @@ const DynamicMap = dynamic(
       }
 
       return (
-        <MapContainer center={routePoints[0]} zoom={12} className="h-full w-full">
-          <TileLayer
-            attribution="&copy; OpenStreetMap"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-
-          {routePoints.length > 1 && <RoutingMachine points={routePoints} />}
-
-          {userLocation && (
-            <Marker position={userLocation} icon={userIcon}>
-              <Popup>
-                <strong>Your current location</strong>
-              </Popup>
-            </Marker>
-          )}
-
-          {planAttractions.map((attraction, index) => (
-            <Marker
-              key={attraction.id}
-              position={[attraction.coordinates[0], attraction.coordinates[1]]}
-              icon={attractionIcon}
+        <div className="relative h-full w-full">
+          {/* Toggle Button */}
+          <div className="absolute bottom-4 left-4 z-[999]">
+            <Button
+              size="sm"
+              variant="outline"
+              className="bg-white shadow-md hover:shadow-lg transition-shadow"
+              onClick={() =>
+                setSatellite(
+                  !satellite
+                )
+              }
             >
-              <Popup>
-                <div>
-                  <h3 className="font-semibold">
-                    {index + 1}. {attraction.name}
-                  </h3>
-                  <p className="text-xs text-gray-500">{attraction.location}</p>
-                  <p className="text-xs text-teal-600">
-                    {attraction.openTime} - {attraction.closeTime}
-                  </p>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
+              {satellite
+                ? "Map"
+                : "Satellite"}
+            </Button>
+          </div>
+
+          <MapContainer
+            center={routePoints[0]}
+            zoom={12}
+            className="h-full w-full"
+          >
+            <TileLayer
+              key={
+                satellite
+                  ? "satellite"
+                  : "street"
+              }
+              url={
+                satellite
+                  ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                  : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              }
+              attribution={
+                satellite
+                  ? "© Esri, Maxar"
+                  : "© OpenStreetMap"
+              }
+              maxZoom={19}
+            />
+
+            {routePoints.length >
+              1 && (
+              <RoutingMachine
+                points={
+                  routePoints
+                }
+              />
+            )}
+
+            {userLocation && (
+              <Marker
+                position={
+                  userLocation
+                }
+                icon={userIcon}
+              >
+                <Popup>
+                  <strong>
+                    Your current
+                    location
+                  </strong>
+                </Popup>
+              </Marker>
+            )}
+
+            {planAttractions.map(
+              (
+                attraction,
+                index
+              ) => (
+                <Marker
+                  key={
+                    attraction.id
+                  }
+                  position={[
+                    attraction
+                      .coordinates[0],
+                    attraction
+                      .coordinates[1],
+                  ]}
+                  icon={
+                    attractionIcon
+                  }
+                >
+                  <Popup>
+                    <div>
+                      <h3 className="font-semibold">
+                        {index +
+                          1}
+                        .{" "}
+                        {
+                          attraction.name
+                        }
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        {
+                          attraction.location
+                        }
+                      </p>
+                      <p className="text-xs text-teal-600">
+                        {
+                          attraction.openTime
+                        }{" "}
+                        -{" "}
+                        {
+                          attraction.closeTime
+                        }
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+              )
+            )}
+          </MapContainer>
+        </div>
       );
     }),
   { ssr: false }
@@ -178,6 +312,15 @@ export default function TravelPlanDetailPage() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [expandedStops, setExpandedStops] = useState<Set<string>>(new Set());
   const [showRouting, setShowRouting] = useState(true);
+  const [transportMode, setTransportMode] = useState<"car" | "motorbike" | "bus">("car");
+
+const TRANSPORT_SPEEDS = {
+  car: 60,
+  motorbike: 70,
+  bus: 45,
+};
+
+const getTransportSpeed = () => TRANSPORT_SPEEDS[transportMode];
 
   const toggleStopExpand = (attractionId: string) => {
     setExpandedStops((prev) => {
@@ -254,10 +397,85 @@ export default function TravelPlanDetailPage() {
 
   const estimatedHours = useMemo(() => {
     if (planAttractions.length === 0) return 0;
-    const travelHours = totalDistance / 60;
-    const visitHours = planAttractions.length * 2;
-    return Math.round(travelHours + visitHours);
-  }, [planAttractions.length, totalDistance]);
+    const speeds = { car: 60, motorbike: 70, bus: 45 };
+    const speed = speeds[transportMode];
+    const travelMinutes = Math.round((totalDistance / speed) * 60);
+    const visitMinutes = planAttractions.length * 2 * 60;
+    return Math.round((travelMinutes + visitMinutes) / 60); // Convert back to hours
+  }, [planAttractions.length, totalDistance, transportMode]);
+
+  const routeDetails = useMemo(() => {
+    const details = [];
+    let cumulativeDistance = 0;
+    const speed = getTransportSpeed();
+  
+
+    if (userLocation && planAttractions.length > 0) {
+      // Distance from user to first attraction
+      const distToFirst = haversineDistance(
+        userLocation[0],
+        userLocation[1],
+        planAttractions[0].coordinates[0],
+        planAttractions[0].coordinates[1]
+      );
+      cumulativeDistance = distToFirst;
+      const timeToFirst = Math.round((distToFirst / speed) * 60); // Convert to minutes
+      details.push({
+        type: "start",
+        from: "Your Location",
+        to: planAttractions[0].name,
+        segmentDistance: Math.round(distToFirst * 10) / 10,
+        cumulativeDistance: Math.round(cumulativeDistance * 10) / 10,
+        estimatedTime: timeToFirst,
+      });
+
+      // Distance between attractions
+      for (let i = 1; i < planAttractions.length; i++) {
+        const prev = planAttractions[i - 1];
+        const curr = planAttractions[i];
+        const segmentDist = haversineDistance(
+          prev.coordinates[0],
+          prev.coordinates[1],
+          curr.coordinates[0],
+          curr.coordinates[1]
+        );
+        cumulativeDistance += segmentDist;
+        const segmentTime = Math.round((segmentDist / speed) * 60); // Convert to minutes
+        details.push({
+          type: "segment",
+          from: prev.name,
+          to: curr.name,
+          segmentDistance: Math.round(segmentDist * 10) / 10,
+          cumulativeDistance: Math.round(cumulativeDistance * 10) / 10,
+          estimatedTime: segmentTime,
+        });
+      }
+    } else if (planAttractions.length > 0) {
+      // Without user location, just calculate between attractions
+      for (let i = 1; i < planAttractions.length; i++) {
+        const prev = planAttractions[i - 1];
+        const curr = planAttractions[i];
+        const segmentDist = haversineDistance(
+          prev.coordinates[0],
+          prev.coordinates[1],
+          curr.coordinates[0],
+          curr.coordinates[1]
+        );
+        cumulativeDistance += segmentDist;
+        const segmentTime = Math.round((segmentDist / speed) * 60); // Convert to minutes
+        details.push({
+          type: i === 1 ? "start" : "segment",
+          from: prev.name,
+          to: curr.name,
+          segmentDistance: Math.round(segmentDist * 10) / 10,
+          cumulativeDistance: Math.round(cumulativeDistance * 10) / 10,
+          estimatedTime: segmentTime,
+        });
+      }
+    }
+
+    return details;
+  }, [userLocation, planAttractions, transportMode,]);
 
   const formatDateRange = (start: string, end: string) => {
     const startDate = new Date(start);
@@ -281,6 +499,20 @@ export default function TravelPlanDetailPage() {
     );
     return Math.max(diff, 1);
   };
+
+const formatTimeEstimate = (totalMinutes: number) => {
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const mins = totalMinutes % 60;
+
+  const parts = [];
+
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (mins > 0) parts.push(`${mins}m`);
+
+  return parts.length ? parts.join(" ") : "0m";
+};
 
   if (!plan) {
     return (
@@ -379,63 +611,6 @@ export default function TravelPlanDetailPage() {
         </div>
       </motion.section>
 
-      {/* Stats Bar */}
-      {planAttractions.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="bg-white border-b border-gray-100 shadow-sm"
-        >
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex flex-wrap items-center gap-6 sm:gap-8">
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50">
-                  <Route className="h-4 w-4 text-teal-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">
-                    {t("travelPlans.totalDistance", "Total Distance")}
-                  </p>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {totalDistance} km
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50">
-                  <Clock className="h-4 w-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">
-                    {t("travelPlans.estimatedTime", "Est. Time")}
-                  </p>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {estimatedHours}{" "}
-                    {estimatedHours === 1
-                      ? t("travelPlans.hour", "hour")
-                      : t("travelPlans.hours", "hours")}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50">
-                  <MapPin className="h-4 w-4 text-teal-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">
-                    {t("travelPlans.stops", "Stops")}
-                  </p>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {planAttractions.length}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column: Route Map + Timeline */}
@@ -447,28 +622,57 @@ export default function TravelPlanDetailPage() {
               transition={{ duration: 0.5, delay: 0.15 }}
             >
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                {/* Header with Toggle Button */}
-                <motion.button
-                  onClick={() => setShowRouting(!showRouting)}
-                  className="w-full flex items-center justify-between px-6 sm:px-8 py-4 hover:bg-teal-50/30 transition-colors group"
-                  whileHover={{ backgroundColor: "rgba(13, 148, 136, 0.03)" }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-50">
-                      <Route className="h-5 w-5 text-teal-600" />
+                {/* Header with Toggle Button and Transport Mode Selector */}
+                <div className="px-6 sm:px-8 py-4 border-b border-gray-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-50">
+                        <Route className="h-5 w-5 text-teal-600" />
+                      </div>
+                      <h2 className="text-lg font-semibold text-gray-900">
+                        {t("travelPlans.routeMap", "Route Map")}
+                      </h2>
                     </div>
-                    <h2 className="text-lg font-semibold text-gray-900">
-                      {t("travelPlans.routeMap", "Route Map")}
-                    </h2>
+                    <motion.button
+                      onClick={() => setShowRouting(!showRouting)}
+                      className="flex items-center gap-2 text-gray-400 hover:text-teal-600 transition-colors"
+                    >
+                      <motion.div
+                        animate={{ rotate: showRouting ? 0 : -90 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronDown className="h-5 w-5" />
+                      </motion.div>
+                    </motion.button>
                   </div>
-                  <motion.div
-                    animate={{ rotate: showRouting ? 0 : -90 }}
-                    transition={{ duration: 0.2 }}
-                    className="text-gray-400 group-hover:text-teal-600"
-                  >
-                    <ChevronDown className="h-5 w-5" />
-                  </motion.div>
-                </motion.button>
+                  
+                  {/* Transport Mode Selector */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-600">
+                      {t("travelPlans.transport", "Transport:")}
+                    </span>
+                    <div className="flex gap-1.5">
+                      {(["car", "motorbike", "bus"] as const).map((mode) => (
+                        <motion.button
+                          key={mode}
+                          onClick={() => setTransportMode(mode)}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            transportMode === mode
+                              ? "bg-teal-600 text-white"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                        >
+                          {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                          {mode === "car" && " (60 km/h)"}
+                          {mode === "motorbike" && " (70 km/h)"}
+                          {mode === "bus" && " (45 km/h)"}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
                 {/* Map Content */}
                 <motion.div
@@ -489,8 +693,8 @@ export default function TravelPlanDetailPage() {
                           planAttractions={planAttractions}
                         />
 
-                        <div className="absolute top-3 right-3 z-[999] bg-white/90 rounded-lg px-3 py-2 shadow-sm text-xs font-medium text-teal-700">
-                          {planAttractions.length} Stops
+                        <div className="absolute top-4 right-4 z-[999] bg-white/95 rounded-lg px-3 py-2 shadow-md text-xs font-medium text-teal-700 border border-teal-100">
+                          {planAttractions.length} {planAttractions.length === 1 ? 'Stop' : 'Stops'}
                         </div>
                       </div>
                     ) : (
@@ -509,6 +713,112 @@ export default function TravelPlanDetailPage() {
                     )}
                   </div>
                 </motion.div>
+
+                {/* Routing Details Section */}
+                {planAttractions.length > 0 && routeDetails.length > 0 && (
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      height: showRouting ? "auto" : 0,
+                      opacity: showRouting ? 1 : 0,
+                    }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden border-t border-gray-100"
+                  >
+                    <div className="p-6 sm:p-8 bg-gradient-to-b from-gray-50 to-white">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                        {t("travelPlans.routeDetails", "Route Details")}
+                      </h3>
+
+                      {/* Summary Stats */}
+                      {routeDetails.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4 }}
+                          className="mb-6 p-4 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl border border-teal-200"
+                        >
+                          <div className="flex flex-wrap items-center gap-6">
+                            <div>
+                              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                                {t("travelPlans.totalDistance", "Total Distance")}
+                              </p>
+                              <p className="text-2xl font-bold text-teal-700 mt-1">
+                                {routeDetails[routeDetails.length - 1].cumulativeDistance} km
+                              </p>
+                            </div>
+                            <div className="h-12 w-px bg-teal-200" />
+                            <div>
+                              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                                {t("travelPlans.travelTime", "Travel Time")}
+                              </p>
+                              <p className="text-2xl font-bold text-emerald-700 mt-1">
+                                {formatTimeEstimate(routeDetails.reduce((sum, detail) => sum + detail.estimatedTime, 0))}
+                              </p>
+                            </div>
+                            <div className="h-12 w-px bg-teal-200" />
+                            <div>
+                              <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                                {t("travelPlans.visitTime", "Visit Time")}
+                              </p>
+                              <p className="text-2xl font-bold text-blue-700 mt-1">
+                                {formatTimeEstimate(planAttractions.length * 2 * 60)}
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      <div className="space-y-2">
+                        {routeDetails.map((detail, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{
+                              duration: 0.3,
+                              delay: 0.1 + index * 0.05,
+                            }}
+                            className="flex items-center justify-between p-3 rounded-lg bg-white border border-gray-100 hover:border-teal-200 transition-colors"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                  {index + 1}
+                                </span>
+                                <span className="text-sm text-gray-600 truncate">
+                                  {detail.from}
+                                </span>
+                                <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" />
+                                <span className="text-sm font-medium text-gray-900 truncate">
+                                  {detail.to}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-4 mt-2 ml-6 text-xs text-gray-500">
+                                <div className="flex items-center gap-1">
+                                  <Route className="h-3 w-3 text-teal-600" />
+                                  <span>{detail.segmentDistance} km</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3 text-emerald-600" />
+                                  <span>{formatTimeEstimate(detail.estimatedTime)}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="shrink-0 text-right ml-4">
+                              <p className="text-sm font-semibold text-teal-700">
+                                {detail.cumulativeDistance} km
+                              </p>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {t("travelPlans.totalFromStart", "from start")}
+                              </p>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </div>
             </motion.div>
 
@@ -677,9 +987,7 @@ export default function TravelPlanDetailPage() {
                                   {attraction.facilities &&
                                     attraction.facilities.length > 0 && (
                                       <div className="flex items-start gap-3 pt-2 border-t border-gray-100">
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 shrink-0">
-                                          <Plus className="h-4 w-4 text-blue-600" />
-                                        </div>
+                                       
                                         <div className="flex-1">
                                           <p className="text-xs font-medium text-gray-500 uppercase">
                                             {t("travelPlans.facilities", "Facilities")}

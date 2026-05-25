@@ -137,6 +137,7 @@ export default function AttractionDetailPage() {
   const [reviewComment, setReviewComment] = useState("");
 
   const [hasRequestedAttraction, setHasRequestedAttraction] = useState(false);
+  const [satellite, setSatellite] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -974,13 +975,15 @@ export default function AttractionDetailPage() {
               <MapContainer
                 center={mapPosition}
                 zoom={14}
-                scrollWheelZoom={false}
+                scrollWheelZoom={true} // ✅ enable mouse zoom
                 className="h-full w-full"
               >
+                {/* SATELLITE DEFAULT TILE LAYER */}
                 <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution="© Esri, Maxar, Earthstar Geographics"
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 />
+
                 <CircleMarker
                   center={mapPosition}
                   radius={8}
@@ -992,15 +995,16 @@ export default function AttractionDetailPage() {
                 >
                   <Popup>
                     <div className="p-1">
-                      {/* Fallback to English name if Lao name isn't active or available */}
                       <h3 className="font-semibold text-sm">
                         {attraction.name}
                       </h3>
+
                       {attraction.nameLa && (
                         <p className="text-xs text-gray-500">
                           {attraction.nameLa}
                         </p>
                       )}
+
                       <p className="text-xs text-gray-400 mt-1">
                         {[
                           attraction.village,
@@ -1015,7 +1019,6 @@ export default function AttractionDetailPage() {
                 </CircleMarker>
               </MapContainer>
             ) : (
-              /* Fallback UI if coordinates are null in database */
               <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
                 <p className="text-sm font-medium text-gray-500">
                   {t(
