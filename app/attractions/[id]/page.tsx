@@ -31,6 +31,7 @@ import { useTranslation } from "react-i18next";
 import { useAttractionStore } from "@/stores/attraction-store";
 import { useReviewStore } from "@/stores/review-store";
 import { useParams, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,6 +48,22 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+
+const MapContainer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.MapContainer),
+  { ssr: false },
+);
+const TileLayer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.TileLayer),
+  { ssr: false },
+);
+const CircleMarker = dynamic(
+  () => import("react-leaflet").then((mod) => mod.CircleMarker),
+  { ssr: false },
+);
+const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), {
+  ssr: false,
+});
 
 const facilityIcons: Record<string, React.ElementType> = {
   Parking: Car,
@@ -91,12 +108,19 @@ export default function AttractionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { plans, fetchPlans, addAttractionToPlan } = useTravelPlanStore();
-  const { reviews, fetchReviews, submitReview, averageRating } = useReviewStore();
+  const { reviews, fetchReviews, submitReview, averageRating } =
+    useReviewStore();
 
   const [addToPlanOpen, setAddToPlanOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState("");
 
-  const { attractions, favorites, toggleFavorite } = useAttractionStore();
+  const {
+    attractions,
+    favorites,
+    toggleFavorite,
+    fetchSingleAttraction,
+    loading: attractionsLoading,
+  } = useAttractionStore();
 
   const { user, isAuthenticated } = useAuthStore();
 
@@ -112,6 +136,9 @@ export default function AttractionDetailPage() {
 
   const [reviewComment, setReviewComment] = useState("");
 
+  const [hasRequestedAttraction, setHasRequestedAttraction] = useState(false);
+  const [satellite, setSatellite] = useState(false);
+
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchPlans(user.id);
@@ -121,35 +148,40 @@ export default function AttractionDetailPage() {
   // Fetch reviews when attraction loads
   useEffect(() => {
     if (attractionId) {
-      console.log('Fetching reviews for attraction:', attractionId);
-      fetchReviews(attractionId).catch(err => {
-        console.error('Failed to fetch reviews:', err);
+      console.log("Fetching reviews for attraction:", attractionId);
+      fetchReviews(attractionId).catch((err) => {
+        console.error("Failed to fetch reviews:", err);
       });
     }
   }, [attractionId, fetchReviews]);
-const handleAddToPlan = async () => {
-  if (!selectedPlanId || !attraction) return;
+  const handleAddToPlan = async () => {
+    if (!selectedPlanId || !attraction) return;
 
-  const targetPlan = plans.find((p) => p.id === selectedPlanId);
+    const targetPlan = plans.find((p) => p.id === selectedPlanId);
 
-  // Adding ': string' fixes the "implicitly has an any type" error
-  const isAlreadyPlanned = targetPlan?.attractionIds?.some(
-    (id: string) => id === attraction.id
-  );
+    // Adding ': string' fixes the "implicitly has an any type" error
+    const isAlreadyPlanned = targetPlan?.attractionIds?.some(
+      (id: string) => id === attraction.id,
+    );
 
-  if (isAlreadyPlanned) {
-    alert(t("attraction.alreadyInPlan", "This attraction is already in your plan!"));
-    return; 
-  }
+    if (isAlreadyPlanned) {
+      alert(
+        t(
+          "attraction.alreadyInPlan",
+          "This attraction is already in your plan!",
+        ),
+      );
+      return;
+    }
 
-  try {
-    await addAttractionToPlan(selectedPlanId, attraction.id);
-    setAddToPlanOpen(false);
-    setSelectedPlanId("");
-  } catch (error) {
-    console.error("Failed to add attraction:", error);
-  }
-};
+    try {
+      await addAttractionToPlan(selectedPlanId, attraction.id);
+      setAddToPlanOpen(false);
+      setSelectedPlanId("");
+    } catch (error) {
+      console.error("Failed to add attraction:", error);
+    }
+  };
   const handleGetDirections = () => {
     if (!attraction?.location) return;
 
@@ -165,15 +197,90 @@ const handleAddToPlan = async () => {
     [attractions, attractionId],
   );
 
+  useEffect(() => {
+    setHasRequestedAttraction(false);
+  }, [attractionId]);
+
+  useEffect(() => {
+    if (!attractionId || attraction || hasRequestedAttraction) return;
+
+    setHasRequestedAttraction(true);
+    fetchSingleAttraction(attractionId).catch((err) => {
+      console.error("Failed to fetch attraction:", err);
+    });
+  }, [attractionId, attraction, hasRequestedAttraction, fetchSingleAttraction]);
+
   const attractionReviews = useMemo(() => {
     const filtered = reviews.filter((r) => r.attractionId === attractionId);
-    console.log('Component reviews:', { attractionId, allReviews: reviews, filtered });
+    console.log("Component reviews:", {
+      attractionId,
+      allReviews: reviews,
+      filtered,
+    });
     return filtered;
   }, [reviews, attractionId]);
+
+  const ratingDistribution = useMemo(() => {
+    const counts: Record<number, number> = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    };
+
+    let ratedReviewCount = 0;
+
+    for (const review of attractionReviews) {
+      const rating = review.rating;
+
+      if (
+        typeof rating === "number" &&
+        Number.isInteger(rating) &&
+        rating >= 1 &&
+        rating <= 5
+      ) {
+        counts[rating] += 1;
+        ratedReviewCount += 1;
+      }
+    }
+
+    return [5, 4, 3, 2, 1].map((starLevel) => ({
+      starLevel,
+      count: counts[starLevel],
+      percentage:
+        ratedReviewCount > 0 ? (counts[starLevel] / ratedReviewCount) * 100 : 0,
+    }));
+  }, [attractionReviews]);
 
   const averageReviewRating = useMemo(() => {
     return averageRating;
   }, [averageRating]);
+
+  const [lat, lng] = attraction?.coordinates ?? [null, null];
+  const mapPosition: [number, number] | null =
+    typeof lat === "number" &&
+    Number.isFinite(lat) &&
+    typeof lng === "number" &&
+    Number.isFinite(lng) &&
+    (lat !== 0 || lng !== 0)
+      ? [lat, lng]
+      : null;
+
+  if (!attraction && (attractionsLoading || !hasRequestedAttraction)) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-teal-50 mx-auto">
+            <MapPin className="h-12 w-12 text-teal-300" />
+          </div>
+          <p className="text-sm text-gray-500">
+            {t("attraction.loading", "Loading attraction...")}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!attraction) {
     return (
@@ -226,86 +333,88 @@ const handleAddToPlan = async () => {
   // Share Social
 
   const shareUrl =
-  typeof window !== "undefined"
-    ? window.location.origin + `/attractions/${attraction.id}`
-    : "";
+    typeof window !== "undefined"
+      ? window.location.origin + `/attractions/${attraction.id}`
+      : "";
 
   const shareToFacebook = () => {
-  const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-    shareUrl,
-  )}`;
-  window.open(url, "_blank", "width=600,height=400");
-};
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+      shareUrl,
+    )}`;
+    window.open(url, "_blank", "width=600,height=400");
+  };
 
-const shareToTwitter = () => {
-  const text = `Check out ${attraction.name} in Laos 🇱🇦`;
+  const shareToTwitter = () => {
+    const text = `Check out ${attraction.name} in Laos 🇱🇦`;
 
-  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-    text,
-  )}&url=${encodeURIComponent(shareUrl)}`;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+      text,
+    )}&url=${encodeURIComponent(shareUrl)}`;
 
-  window.open(url, "_blank", "width=600,height=400");
-};
+    window.open(url, "_blank", "width=600,height=400");
+  };
 
+  const shareToWhatsApp = () => {
+    const text = `Check this out: ${attraction.name} - ${shareUrl}`;
 
-const shareToWhatsApp = () => {
-  const text = `Check this out: ${attraction.name} - ${shareUrl}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
 
-  const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
+  };
 
-  window.open(url, "_blank");
-};
-
-const copyLink = async () => {
-  try {
-    await navigator.clipboard.writeText(shareUrl);
-    alert("Link copied to clipboard!");
-  } catch (err) {
-    console.error("Failed to copy:", err);
-  }
-};
-
-const handleShare = async () => {
-  const url = window.location.href;
-  const title = attraction?.name || "Check this attraction";
-
-  // Native share (mobile / modern browsers)
-  if (navigator.share) {
+  const copyLink = async () => {
     try {
-      await navigator.share({
-        title,
-        text: title,
-        url,
-      });
-      return;
+      await navigator.clipboard.writeText(shareUrl);
+      alert("Link copied to clipboard!");
     } catch (err) {
-      console.log("Share cancelled");
+      console.error("Failed to copy:", err);
     }
-  }
+  };
 
-  // Fallback: open share menu (simple version)
-  const facebook = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
-  const twitter = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-    title,
-  )}&url=${encodeURIComponent(url)}`;
-  const whatsapp = `https://wa.me/?text=${encodeURIComponent(
-    title + " " + url,
-  )}`;
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = attraction?.name || "Check this attraction";
 
-  // Open multiple options (or choose one UI later)
-  window.open(facebook, "_blank");
-  window.open(twitter, "_blank");
-  window.open(whatsapp, "_blank");
-};
+    // Native share (mobile / modern browsers)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title,
+          text: title,
+          url,
+        });
+        return;
+      } catch (err) {
+        console.log("Share cancelled");
+      }
+    }
 
+    // Fallback: open share menu (simple version)
+    const facebook = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+    const twitter = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+      title,
+    )}&url=${encodeURIComponent(url)}`;
+    const whatsapp = `https://wa.me/?text=${encodeURIComponent(
+      title + " " + url,
+    )}`;
 
-//Handler submit Review
+    // Open multiple options (or choose one UI later)
+    window.open(facebook, "_blank");
+    window.open(twitter, "_blank");
+    window.open(whatsapp, "_blank");
+  };
+
+  //Handler submit Review
   const handleSubmitReview = async () => {
     if (!reviewComment.trim()) return;
 
     try {
-      const result = await submitReview(attractionId, reviewComment.trim(), reviewRating || undefined);
-      
+      const result = await submitReview(
+        attractionId,
+        reviewComment.trim(),
+        reviewRating || undefined,
+      );
+
       if (result.success) {
         // Reset form
         setReviewRating(0);
@@ -316,11 +425,21 @@ const handleShare = async () => {
         }
         // Reviews will be refetched by the store
       } else {
-        alert(t("attraction.reviewSubmitError", "Failed to submit review. Please try again."));
+        alert(
+          t(
+            "attraction.reviewSubmitError",
+            "Failed to submit review. Please try again.",
+          ),
+        );
       }
     } catch (error) {
       console.error("Error submitting review:", error);
-      alert(t("attraction.reviewSubmitError", "Failed to submit review. Please try again."));
+      alert(
+        t(
+          "attraction.reviewSubmitError",
+          "Failed to submit review. Please try again.",
+        ),
+      );
     }
   };
 
@@ -638,19 +757,12 @@ const handleShare = async () => {
                 )}
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                {attractionReviews.length}{" "}
+                {attraction.reviewCount}{" "}
                 {t("attraction.reviewCount", "reviews")}
               </p>
             </div>
             <div className="flex-1">
-              {[5, 4, 3, 2, 1].map((starLevel) => {
-                const count = attractionReviews.filter(
-                  (r) => r.rating === starLevel,
-                ).length;
-                const percentage =
-                  attractionReviews.length > 0
-                    ? (count / attractionReviews.length) * 100
-                    : 0;
+              {ratingDistribution.map(({ starLevel, count, percentage }) => {
                 return (
                   <div key={starLevel} className="flex items-center gap-2 mb-1">
                     <span className="text-xs text-gray-500 w-6 text-right">
@@ -693,11 +805,14 @@ const handleShare = async () => {
                           {review.userName}
                         </span>
                         <span className="text-xs text-gray-400 shrink-0">
-                          {new Date(review.createdAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })}
+                          {new Date(review.createdAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            },
+                          )}
                         </span>
                       </div>
                       <div className="mt-0.5">
@@ -843,7 +958,7 @@ const handleShare = async () => {
         </div>
       </motion.section>
 
-      {/* Map Placeholder */}
+      {/* Map Section */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -854,20 +969,75 @@ const handleShare = async () => {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             {t("attraction.location", "Location")}
           </h2>
-          <div className="relative aspect-[16/9] rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 border-2 border-dashed border-teal-200 flex flex-col items-center justify-center">
-            <MapPin className="h-12 w-12 text-teal-400 mb-3" />
-            <p className="text-sm font-medium text-teal-700">
-              {t("attraction.mapboxIntegration", "Mapbox Integration")}
-            </p>
-            <p className="text-xs text-teal-500 mt-1">
-              {attraction.coordinates[0]}, {attraction.coordinates[1]}
-            </p>
-            <p className="text-xs text-gray-400 mt-3">
-              {t(
-                "attraction.mapPlaceholder",
-                "Interactive map will be displayed here",
-              )}
-            </p>
+
+          <div className="relative aspect-[16/9] rounded-xl overflow-hidden border border-gray-100 z-0 bg-gray-50">
+            {mapPosition ? (
+              <MapContainer
+                center={mapPosition}
+                zoom={14}
+                scrollWheelZoom={true} // ✅ enable mouse zoom
+                className="h-full w-full"
+              >
+                {/* SATELLITE DEFAULT TILE LAYER */}
+                <TileLayer
+                  attribution="© Esri, Maxar, Earthstar Geographics"
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                />
+
+                <CircleMarker
+                  center={mapPosition}
+                  radius={8}
+                  pathOptions={{
+                    color: "#0f766e",
+                    fillColor: "#14b8a6",
+                    fillOpacity: 0.85,
+                  }}
+                >
+                  <Popup>
+                    <div className="p-1">
+                      <h3 className="font-semibold text-sm">
+                        {attraction.name}
+                      </h3>
+
+                      {attraction.nameLa && (
+                        <p className="text-xs text-gray-500">
+                          {attraction.nameLa}
+                        </p>
+                      )}
+
+                      <p className="text-xs text-gray-400 mt-1">
+                        {[
+                          attraction.village,
+                          attraction.district,
+                          attraction.province,
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              </MapContainer>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                <p className="text-sm font-medium text-gray-500">
+                  {t(
+                    "attraction.noCoordinates",
+                    "Location coordinates not available",
+                  )}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {[
+                    attraction.village,
+                    attraction.district,
+                    attraction.province,
+                  ]
+                    .filter(Boolean)
+                    .join(", ") ||
+                    t("attraction.noAddress", "No address specified")}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </motion.section>

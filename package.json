@@ -60,6 +60,7 @@
     "i18next": "^26.0.8",
     "input-otp": "^1.2.4",
     "leaflet": "^1.9.4",
+    "leaflet-routing-machine": "^3.2.12",
     "lucide-react": "^0.446.0",
     "mapbox-gl": "^3.23.1",
     "next": "13.5.1",
