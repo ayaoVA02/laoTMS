@@ -335,7 +335,6 @@ export default function RegisterPage() {
                         <SelectValue
                           placeholder={t("auth.selectRole", "Select your role")}
                         />
-                        <ChevronDown className="w-4 h-4 text-slate-400" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="TOURIST">
