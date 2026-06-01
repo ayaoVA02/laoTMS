@@ -7,6 +7,7 @@ import {
   Wifi, Car, Utensils, BedDouble, Globe,
   Image as ImageIcon, ChevronDown, ChevronUp, Loader2,
   Check, Eye, Save, Info, Video, Sparkles,
+  Phone,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import DashboardLayout from "@/components/shared/dashboard-layout";
@@ -164,7 +165,7 @@ export default function CreateAttractionPage() {
   const [entryFeeForeigner, setEntryFeeForeigner] = useState("");
   const [isFreeEntry, setIsFreeEntry] = useState(false);
   const [bestTimeVisit, setBestTimeVisit] = useState("");
-
+  const [guidePhone, setGuidePhone] = useState("");
   const [hasParking, setHasParking] = useState(false);
   const [isFreeParking, setIsFreeParking] = useState(false);
   const [parkingPrice, setParkingPrice] = useState("");
@@ -194,6 +195,7 @@ export default function CreateAttractionPage() {
     setOpenTime("08:00"); setCloseTime("17:00");
     setEntryFeeForeigner(""); setIsFreeEntry(false); setBestTimeVisit("");
     // ✅ toggles reset too
+    setGuidePhone("");
     setHasParking(false); setIsFreeParking(false); setParkingPrice("");
     setHasRestaurant(false);
     setHasAccommodation(false); setAccPrice("");
@@ -241,11 +243,24 @@ export default function CreateAttractionPage() {
     errors.has(key) ? "border-red-500 focus:ring-red-500" : "";
 
   // ── Image upload ───────────────────────────────────────────────────────────
+  // const uploadImage = async (item: ImageItem) => {
+  //   setImages(prev => prev.map(i => i.id === item.id ? { ...i, uploading: true } : i));
+  //   try {
+  //     const url = await uploadToR2(item.file, "attractions/images");
+  //     setImages(prev => prev.map(i => i.id === item.id ? { ...i, uploading: false, uploadedUrl: url } : i));
+  //   } catch {
+  //     setImages(prev => prev.map(i => i.id === item.id ? { ...i, uploading: false, error: true } : i));
+  //     toast.error(`Failed to upload ${item.file.name}`);
+  //   }
+  // };
+
   const uploadImage = async (item: ImageItem) => {
     setImages(prev => prev.map(i => i.id === item.id ? { ...i, uploading: true } : i));
     try {
       const url = await uploadToR2(item.file, "attractions/images");
-      setImages(prev => prev.map(i => i.id === item.id ? { ...i, uploading: false, uploadedUrl: url } : i));
+      // ✅ Extract filename only
+      const fileName = url.split("/").pop()!;
+      setImages(prev => prev.map(i => i.id === item.id ? { ...i, uploading: false, uploadedUrl: fileName } : i));
     } catch {
       setImages(prev => prev.map(i => i.id === item.id ? { ...i, uploading: false, error: true } : i));
       toast.error(`Failed to upload ${item.file.name}`);
@@ -299,11 +314,24 @@ export default function CreateAttractionPage() {
   };
 
   // ── Video upload ───────────────────────────────────────────────────────────
+  // const uploadVideo = async (item: VideoItem) => {
+  //   setVideos(prev => prev.map(v => v.id === item.id ? { ...v, uploading: true } : v));
+  //   try {
+  //     const url = await uploadToR2(item.file, "attractions/videos");
+  //     setVideos(prev => prev.map(v => v.id === item.id ? { ...v, uploading: false, uploadedUrl: url } : v));
+  //   } catch {
+  //     setVideos(prev => prev.map(v => v.id === item.id ? { ...v, uploading: false, error: true } : v));
+  //     toast.error(`Failed to upload ${item.file.name}`);
+  //   }
+  // };
+
   const uploadVideo = async (item: VideoItem) => {
     setVideos(prev => prev.map(v => v.id === item.id ? { ...v, uploading: true } : v));
     try {
       const url = await uploadToR2(item.file, "attractions/videos");
-      setVideos(prev => prev.map(v => v.id === item.id ? { ...v, uploading: false, uploadedUrl: url } : v));
+      // ✅ Extract filename only
+      const fileName = url.split("/").pop()!;
+      setVideos(prev => prev.map(v => v.id === item.id ? { ...v, uploading: false, uploadedUrl: fileName } : v));
     } catch {
       setVideos(prev => prev.map(v => v.id === item.id ? { ...v, uploading: false, error: true } : v));
       toast.error(`Failed to upload ${item.file.name}`);
@@ -337,6 +365,9 @@ export default function CreateAttractionPage() {
   const handleGenerateSocialCaption = async () => {
     if (generatingSocial) return;
     setGeneratingSocial(true);
+    console.log("Generating social caption with:", { nameEn, description, typeId });
+
+
     try {
       const categoryName = types.find(tp => tp.type_id === typeId)?.name_en;
       const entryFeeText = isFreeEntry ? "Free" : (entryFeeForeigner ? `${entryFeeForeigner} LAK` : "");
@@ -356,6 +387,9 @@ export default function CreateAttractionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
+      console.log("Gemini response status:", res.status);
+
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Failed to generate caption");
 
@@ -373,6 +407,7 @@ export default function CreateAttractionPage() {
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (status: "draft" | "pending") => {
+    console.log("Submitting attraction with status:", status);
     if (!validate()) return;
     if (!user) { toast.error("Please login first"); return; }
     if ([...images, ...videos].some((m: any) => m.uploading)) {
@@ -386,21 +421,24 @@ export default function CreateAttractionPage() {
         user_id: user.id,
         type_id: typeId || null,
         name_en: nameEn,
-        name_la: nameLa,
+        name_la: nameLa || "",
         description,
-        activity,
-        license,
-        province: pickOnMap ? undefined : province,
-        district: pickOnMap ? undefined : district,
-        village: pickOnMap ? undefined : village,
-        location,
+        activity: activity || "",
+        license: license || "",
+        // ✅ Always send strings, never undefined
+        province: (!pickOnMap && province) ? province : "",
+        district: (!pickOnMap && district) ? district : "",
+        village: (!pickOnMap && village) ? village : "",
+        location: location || "",
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
-        open_time: openTime,
-        close_time: closeTime,
+        // ✅ Always send full HH:MM:SS format
+        guide_phone: !hasInternet ? (guidePhone.trim() || null) : null,
+        open_time: openTime ? `${openTime}:00` : "08:00:00",
+        close_time: closeTime ? `${closeTime}:00` : "17:00:00",
         entry_fee_foreigner: isFreeEntry ? 0 : parseFloat(entryFeeForeigner || "0"),
         is_free_entry: isFreeEntry,
-        best_time_visit: bestTimeVisit,
+        best_time_visit: bestTimeVisit || "",
         has_parking: hasParking,
         is_free_parking: isFreeParking,
         parking_price: hasParking && !isFreeParking ? parseFloat(parkingPrice || "0") : 0,
@@ -420,10 +458,20 @@ export default function CreateAttractionPage() {
       const tryInsert = (payload: any) =>
         supabase.from("attractions").insert(payload).select("attraction_id").single();
 
+      const cleaned = Object.fromEntries(
+        Object.entries(insertBase).filter(([_, v]) => v !== undefined)
+      );
+      console.log("Clean payload:", cleaned);
       // Send address/directions via `location` (backend field)
       const attractionRes = await tryInsert(insertBase);
 
       const { data: attraction, error: attrError } = attractionRes;
+
+      console.log("Attraction insert result:", attractionRes);
+      console.log("attraction:", attraction);
+
+      
+
 
       if (attrError) throw attrError;
       const attractionId = attraction.attraction_id;
@@ -448,15 +496,8 @@ export default function CreateAttractionPage() {
           await supabase.from("social").insert({
             attraction_id: attractionId,
             user_id: user.id,
-            // social_images: {
-            //   images: socialImages,
-            //   platforms: {
-            //     facebook: postFacebook,
-            //     tiktok: postTiktok,
-            //     instagram: postInstagram,
-            //   },
-            // },
-            social_images: socialImages,
+            // ✅ Cast to jsonb-compatible value
+            social_images: JSON.parse(JSON.stringify(socialImages)),
             facebook: postFacebook,
             description: socialText,
             website_link: socialWebsiteLink.trim() || null,
@@ -787,12 +828,29 @@ export default function CreateAttractionPage() {
               }
             />
             <FacilityToggle icon={<Wifi className="w-4 h-4" />} label="Internet / WiFi"
-              checked={hasInternet} onChange={setHasInternet}
+              checked={hasInternet} onChange={(v) => { setHasInternet(v); if (v) setGuidePhone(""); }}
               subContent={
                 <FacilityToggle icon={<Wifi className="w-3.5 h-3.5" />} label="Free WiFi"
                   checked={isFreeWifi} onChange={setIsFreeWifi} />
               }
             />
+
+            {/* ✅ Show guide phone when no internet */}
+            {!hasInternet && (
+              <div className="sm:col-span-2">
+                <Field label="Tour Guide Phone Number">
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="+856 20 xx xxx xxx"
+                      value={guidePhone}
+                      onChange={e => setGuidePhone(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </Field>
+              </div>
+            )}
             <FacilityToggle icon={<Utensils className="w-4 h-4" />} label="Restaurant / Food"
               checked={hasRestaurant} onChange={setHasRestaurant} />
             <FacilityToggle icon={<BedDouble className="w-4 h-4" />} label="Accommodation"
