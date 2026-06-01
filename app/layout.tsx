@@ -2,8 +2,11 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Providers } from './providers';
-import AuthProvider from './auth-provider';
+import AuthProvider from './auth-provider';import { Toaster } from "sonner";
+
+<Toaster richColors position="top-right" />
 const inter = Inter({ subsets: ['latin'] });
+
 
 export const metadata: Metadata = {
   title: 'LaoTMS - Lao Tourism Management System',

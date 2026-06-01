@@ -12,6 +12,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const fetchAttractions = useAttractionStore((s) => s.fetchAttractions);
   const fetchTypes = useAttractionStore((s) => s.fetchTypes);
 
+
   useEffect(() => {
     fetchAttractions();
     fetchTypes();
