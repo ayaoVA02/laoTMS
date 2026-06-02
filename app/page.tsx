@@ -20,7 +20,7 @@ import { useAttractionStore } from "@/stores/attraction-store";
 import Link from "next/link";
 import Image from "next/image";
 import Footer from "@/components/layout/footer";
-import { useState } from "react";
+import {  useState } from "react";
 import { Button } from '@/components/ui/button';
 
 const popularDestinations = [
@@ -56,8 +56,12 @@ export default function Home() {
   const promotions: { id: string; title: string; description: string; image: string; discount: number; validUntil: string; attractionId: string }[] = [];
   const featuredAttractions = attractions.filter((a) => a.featured);
   const [isExpanded, setIsExpanded] = useState(false);
+
+
+
   return (
     <div className="min-h-screen bg-gray-50">
+    
       {/* ===== HERO SECTION ===== */}
       <section className="relative flex min-h-[90vh] items-center justify-center overflow-hidden">
         {/* Background Image */}
