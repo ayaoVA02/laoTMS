@@ -16,6 +16,7 @@ import {
   Plus,
   Bell,
   Tag,
+  User,
 } from "lucide-react";
 import { useAuthStore, type UserRole } from "@/stores/auth-store";
 import { useAppStore } from "@/stores/app-store";
@@ -28,6 +29,10 @@ interface MenuItem {
   href: string;
   labelKey: string;
   icon: LucideIcon;
+}
+
+interface SidebarProps {
+  viewMode?: "ROLE" | "TOURIST";
 }
 
 const roleMenuItems: Record<UserRole, MenuItem[]> = {
@@ -108,11 +113,12 @@ const roleMenuItems: Record<UserRole, MenuItem[]> = {
   ],
 };
 
-const roleBadgeColors: Record<UserRole, string> = {
+const roleBadgeColors: Record<UserRole | "TOURIST_VIEW", string> = {
   ADMIN: "bg-red-500/20 text-red-400 border-red-500/30",
   STAFF: "bg-teal-500/20 text-teal-400 border-teal-500/30",
   ENTREPRENEUR: "bg-amber-500/20 text-amber-400 border-amber-500/30",
   TOURIST: "bg-sky-500/20 text-sky-400 border-sky-500/30",
+  TOURIST_VIEW: "bg-sky-500/20 text-sky-400 border-sky-500/30 border-dashed",
 };
 
 const sidebarVariants = {
@@ -125,7 +131,7 @@ const labelVariants = {
   collapsed: { opacity: 0, x: -8, transitionEnd: { display: "none" } },
 };
 
-export default function Sidebar() {
+export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
   const pathname = usePathname();
   const { t } = useTranslation();
   const { user } = useAuthStore();
@@ -137,9 +143,9 @@ export default function Sidebar() {
   }, []);
 
   const menuItems = useMemo(() => {
-    if (!user) return roleMenuItems.TOURIST;
+    if (!user || viewMode === "TOURIST") return roleMenuItems.TOURIST;
     return roleMenuItems[user.role];
-  }, [user]);
+  }, [user, viewMode]);
 
   const isCollapsed = !sidebarOpen;
 
@@ -325,10 +331,12 @@ export default function Sidebar() {
               </p>
               <span
                 className={`inline-flex items-center mt-0.5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md border ${
-                  roleBadgeColors[user?.role || "TOURIST"]
+                  viewMode === "TOURIST" && user?.role !== "TOURIST"
+                    ? roleBadgeColors.TOURIST_VIEW
+                    : roleBadgeColors[user?.role || "TOURIST"]
                 }`}
               >
-                {user?.role || "TOURIST"}
+                {viewMode === "TOURIST" && user?.role !== "TOURIST" ? "Previewing Traveler" : (user?.role || "TOURIST")}
               </span>
             </motion.div>
           </div>

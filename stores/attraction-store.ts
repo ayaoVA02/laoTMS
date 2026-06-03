@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import  { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -11,6 +11,7 @@ export interface Attraction {
   location: string;
   coordinates: [number, number];
   images: string[];
+  videos: string[];
   rating: number;
   reviewCount: number;
   price: number;
@@ -42,7 +43,7 @@ export interface Attraction {
   thumbnailImage: string;
 }
 
-function mapAttraction(row: Record<string, unknown>, images: string[] = []): Attraction {
+function mapAttraction(row: Record<string, unknown>, images: string[] = [], videos: string[] = []): Attraction {
   const facilities: string[] = [];
   if (row.has_parking) facilities.push('Parking');
   if (row.is_free_parking) facilities.push('Free Parking');
@@ -68,6 +69,7 @@ function mapAttraction(row: Record<string, unknown>, images: string[] = []): Att
     location: row.location as string,
     coordinates: [Number(row.latitude) || 0, Number(row.longitude) || 0] as [number, number],
     images: images.length > 0 ? images : (row.thumbnail_image ? [row.thumbnail_image as string] : []),
+    videos: videos.length > 0 ? videos : (row.video_url ? [row.video_url as string] : []),
     rating: Number(row.rating) || 0,
     reviewCount: Number(row.review_count) || 0,
     price: Number(row.entry_fee_foreigner) || 0,
@@ -106,7 +108,7 @@ interface AttractionState {
   favorites: string[];
   searchQuery: string;
   selectedCategory: string;
-  types: { id: string; name_en: string; name_la: string; icon: string , is_active:boolean }[];
+  types: { id: string; name_en: string; name_la: string; icon: string, is_active: boolean }[];
   loading: boolean;
   setSelectedAttraction: (a: Attraction | null) => void;
   setSearchQuery: (q: string) => void;
@@ -193,6 +195,18 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
         imageMap[img.attraction_id].push(img.image_url);
       });
 
+      const { data: videoRows } = await supabase
+        .from('attraction_videos')
+        .select('attraction_id, video_url');
+
+      const videoMap: Record<string, string[]> = {};
+      (videoRows || []).forEach((v) => {
+        if (!videoMap[v.attraction_id]) videoMap[v.attraction_id] = [];
+        videoMap[v.attraction_id].push(v.video_url);
+      });
+
+      // Then pass to mapAttraction:
+
       const { data: entrepreneurRows } = await supabase
         .from('entrepreneurs')
         .select('user_id, first_name, last_name');
@@ -202,8 +216,18 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
         nameMap[e.user_id] = `${e.first_name} ${e.last_name}`.trim();
       });
 
+      // const mapped = (attractionRows || []).map((row) => {
+      //   const a = mapAttraction(row, imageMap[row.attraction_id] || []);
+      //   a.entrepreneurName = nameMap[row.user_id] || 'Unknown';
+      //   return a;
+      // });
+
       const mapped = (attractionRows || []).map((row) => {
-        const a = mapAttraction(row, imageMap[row.attraction_id] || []);
+        const a = mapAttraction(
+          row,
+          imageMap[row.attraction_id] || [],
+          videoMap[row.attraction_id] || []   // ← add this
+        );
         a.entrepreneurName = nameMap[row.user_id] || 'Unknown';
         return a;
       });
@@ -237,35 +261,43 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
         .order('display_order', { ascending: true });
 
       const images = (imageRows || []).map((img) => img.image_url);
-      const updatedAttraction = mapAttraction(attractionRow, images);
+
+
+      const { data: videoRows } = await supabase
+        .from('attraction_videos')
+        .select('attraction_id, video_url')
+        .eq('attraction_id', attractionId);
+      const videos = (videoRows || []).map((video) => video.video_url);
+
+      const updatedAttraction = mapAttraction(attractionRow, images, videos);
 
       set((state) => ({
         attractions: state.attractions.some((attraction) => attraction.id === attractionId)
           ? state.attractions.map((attraction) =>
-              attraction.id === attractionId
-                ? {
-                    ...updatedAttraction,
-                    entrepreneurName: attraction.entrepreneurName,
-                  }
-                : attraction
-            )
+            attraction.id === attractionId
+              ? {
+                ...updatedAttraction,
+                entrepreneurName: attraction.entrepreneurName,
+              }
+              : attraction
+          )
           : [updatedAttraction, ...state.attractions],
         filteredAttractions: state.filteredAttractions.some((attraction) => attraction.id === attractionId)
           ? state.filteredAttractions.map((attraction) =>
-              attraction.id === attractionId
-                ? {
-                    ...updatedAttraction,
-                    entrepreneurName: attraction.entrepreneurName,
-                  }
-                : attraction
-            )
+            attraction.id === attractionId
+              ? {
+                ...updatedAttraction,
+                entrepreneurName: attraction.entrepreneurName,
+              }
+              : attraction
+          )
           : [updatedAttraction, ...state.filteredAttractions],
         selectedAttraction:
           state.selectedAttraction?.id === attractionId
             ? {
-                ...updatedAttraction,
-                entrepreneurName: state.selectedAttraction.entrepreneurName,
-              }
+              ...updatedAttraction,
+              entrepreneurName: state.selectedAttraction.entrepreneurName,
+            }
             : updatedAttraction,
         loading: false,
       }));

@@ -1,4 +1,5 @@
 export interface Attraction {
+  id: string;
   attraction_id: string;
   name_en: string;
   name_la: string;
@@ -21,7 +22,6 @@ export interface Attraction {
   close_time: string;
   created_at: string;
   type_name?: string;
-  // thumbnail URL resolved from R2 or storage
   thumbnailUrl?: string;
 }
 

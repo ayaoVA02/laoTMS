@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useAttractionStore } from '@/stores/attraction-store';
 import { useTravelPlanStore } from '@/stores/travel-plan-store';
@@ -11,20 +11,22 @@ import { useRouter } from 'next/navigation'; // ✅ correct import for App Route
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const initAuth = useAuthStore((s) => s.initAuth);
   const router = useRouter();
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    initAuth();
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      initAuth();
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth event:', event, session);
-
         if (event === 'SIGNED_OUT') {
           useAuthStore.setState({ user: null, isAuthenticated: false, loading: false });
           useAttractionStore.setState({ favorites: [] });
           useTravelPlanStore.setState({ plans: [], selectedPlan: null });
 
-        } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+        } else if (event === 'SIGNED_IN' && session) {
           const role = session.user.user_metadata?.role;
 
           if (!role) {
