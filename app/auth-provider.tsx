@@ -6,7 +6,13 @@ import { useAttractionStore } from '@/stores/attraction-store';
 import { useTravelPlanStore } from '@/stores/travel-plan-store';
 import { supabase } from '@/lib/supabase';
 import { Toaster } from 'react-hot-toast';
-import { useRouter } from 'next/navigation'; // ✅ correct import for App Router
+
+// ── OneSignal types (avoid import errors) ───────────────────────
+declare global {
+  interface Window {
+    OneSignalDeferred?: ((onesignal: any) => void)[];
+  }
+}
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const initAuth = useAuthStore((s) => s.initAuth);
@@ -36,12 +42,24 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             // Has role = normal login → restore session
             await initAuth();
           }
+        } else {
+          console.warn('OneSignal pushSubscription and fallback listener not available yet');
         }
       }
-    );
 
-    return () => subscription.unsubscribe();
-  }, [initAuth, router]);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await OneSignal.login(session.user.id);
+        console.log('✅ OneSignal linked:', session.user.id);
+      }
+    });
+
+    return () => {
+      if (addedScript && script && document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
+    };
+  }, []);
 
   return (
     <>

@@ -49,6 +49,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
+
+const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE || "";
+const VIDEO_BASE_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_VDO || "";
 const MapContainer = dynamic(
   () => import("react-leaflet").then((mod) => mod.MapContainer),
   { ssr: false },
@@ -113,7 +116,7 @@ export default function AttractionDetailPage() {
 
   const [addToPlanOpen, setAddToPlanOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState("");
-
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const {
     attractions,
     favorites,
@@ -148,7 +151,7 @@ export default function AttractionDetailPage() {
   // Fetch reviews when attraction loads
   useEffect(() => {
     if (attractionId) {
-      console.log("Fetching reviews for attraction:", attractionId);
+      // console.log("Fetching reviews for attraction:", attractionId);
       fetchReviews(attractionId).catch((err) => {
         console.error("Failed to fetch reviews:", err);
       });
@@ -197,6 +200,15 @@ export default function AttractionDetailPage() {
     [attractions, attractionId],
   );
 
+  const images = attraction?.images || [];
+  const videos = attraction?.videos || [];
+
+  useEffect(() => {
+    if (currentVideoIndex >= videos.length) {
+      setCurrentVideoIndex(0);
+    }
+  }, [videos, currentVideoIndex]);
+
   useEffect(() => {
     setHasRequestedAttraction(false);
   }, [attractionId]);
@@ -212,11 +224,11 @@ export default function AttractionDetailPage() {
 
   const attractionReviews = useMemo(() => {
     const filtered = reviews.filter((r) => r.attractionId === attractionId);
-    console.log("Component reviews:", {
-      attractionId,
-      allReviews: reviews,
-      filtered,
-    });
+    // console.log("Component reviews:", {
+    //   attractionId,
+    //   allReviews: reviews,
+    //   filtered,
+    // });
     return filtered;
   }, [reviews, attractionId]);
 
@@ -260,10 +272,10 @@ export default function AttractionDetailPage() {
   const [lat, lng] = attraction?.coordinates ?? [null, null];
   const mapPosition: [number, number] | null =
     typeof lat === "number" &&
-    Number.isFinite(lat) &&
-    typeof lng === "number" &&
-    Number.isFinite(lng) &&
-    (lat !== 0 || lng !== 0)
+      Number.isFinite(lat) &&
+      typeof lng === "number" &&
+      Number.isFinite(lng) &&
+      (lat !== 0 || lng !== 0)
       ? [lat, lng]
       : null;
 
@@ -314,8 +326,13 @@ export default function AttractionDetailPage() {
 
   const isFavorite = favorites.includes(attraction.id);
 
-  const images = attraction.images || [];
+  const activeVideoUrl =
+    videos.length > 0 && videos[currentVideoIndex]
+      ?  videos[currentVideoIndex]
+      : null;
 
+      
+  // console.log("Attraction details VDO:", VIDEO_BASE_URL + activeVideoUrl);
   const openHours = `${attraction.openTime} - ${attraction.closeTime}`;
 
   const handlePrevImage = () => {
@@ -460,16 +477,14 @@ export default function AttractionDetailPage() {
             onClick={() => interactive && setReviewRating(star)}
             onMouseEnter={() => interactive && setHoverRating(star)}
             onMouseLeave={() => interactive && setHoverRating(0)}
-            className={`${
-              interactive ? "cursor-pointer" : "cursor-default"
-            } transition-colors`}
+            className={`${interactive ? "cursor-pointer" : "cursor-default"
+              } transition-colors`}
           >
             <Star
-              className={`${size} ${
-                star <= displayRating
+              className={`${size} ${star <= displayRating
                   ? "fill-amber-400 text-amber-400"
                   : "text-gray-300"
-              }`}
+                }`}
             />
           </button>
         ))}
@@ -514,7 +529,7 @@ export default function AttractionDetailPage() {
           <AnimatePresence mode="wait">
             <motion.img
               key={currentImageIndex}
-              src={images[currentImageIndex]}
+              src={IMAGE_BASE_URL + images[currentImageIndex]}
               alt={`${attraction.name} - image ${currentImageIndex + 1}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -558,14 +573,13 @@ export default function AttractionDetailPage() {
                 key={index}
                 onClick={() => setCurrentImageIndex(index)}
                 // Added 'relative' so the Image component knows where its boundaries are
-                className={`relative shrink-0 h-16 w-24 rounded-lg overflow-hidden border-2 transition-all duration-200 snap-start ${
-                  index === currentImageIndex
+                className={`relative shrink-0 h-16 w-24 rounded-lg overflow-hidden border-2 transition-all duration-200 snap-start ${index === currentImageIndex
                     ? "border-teal-500 ring-2 ring-teal-500/30"
                     : "border-transparent opacity-70 hover:opacity-100"
-                }`}
+                  }`}
               >
                 <Image
-                  src={img}
+                  src={IMAGE_BASE_URL + img}
                   alt={`Thumbnail ${index + 1}`}
                   fill
                   sizes="96px" // Optimization hint: tells the browser this image is small
@@ -640,11 +654,10 @@ export default function AttractionDetailPage() {
             <Button
               onClick={() => toggleFavorite(attraction.id)}
               variant={isFavorite ? "default" : "outline"}
-              className={`${
-                isFavorite
+              className={`${isFavorite
                   ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500"
                   : "border-gray-200 text-gray-600 hover:text-rose-500 hover:border-rose-300"
-              }`}
+                }`}
             >
               <Heart
                 className={`mr-2 h-4 w-4 ${isFavorite ? "fill-white" : ""}`}
@@ -730,7 +743,211 @@ export default function AttractionDetailPage() {
         </div>
       </motion.section>
 
-      {/* Reviews Section */}
+ 
+
+      {/* Video Reviews Section */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+        className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-6"
+      >
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            {t("attraction.videoReviews", "Video Reviews")}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* {videos.map((i) => (
+              <motion.div
+                key={i}
+                whileHover={{ scale: 1.02 }}
+                className="relative aspect-video rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden flex items-center justify-center group cursor-pointer"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-600/90 text-white group-hover:bg-teal-600 transition-colors shadow-lg">
+                  <Play className="h-6 w-6 fill-white ml-1" />
+                </div>
+                <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+                  <span className="text-xs text-gray-500 bg-white/80 backdrop-blur-sm rounded px-2 py-0.5">
+                    {t("attraction.videoReview", "Video Review")} {i}
+                  </span>
+                  <span className="text-xs text-gray-500 bg-white/80 backdrop-blur-sm rounded px-2 py-0.5">
+                    
+                    {i}
+                  </span>
+                </div>
+              </motion.div>
+            ))} */}
+
+            {videos.length === 0 ? (
+              <div className="col-span-1 rounded-3xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-gray-500">
+                {t(
+                  "attraction.noVideoReviews",
+                  "No video reviews available yet.",
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="col-span-1 lg:col-span-3 rounded-3xl overflow-hidden bg-black shadow-lg">
+                  {activeVideoUrl ? (
+                    <video
+                      key={ activeVideoUrl}
+                      src={VIDEO_BASE_URL + activeVideoUrl}
+                      controls
+                      playsInline
+                      autoPlay
+                      muted
+                      className="h-full w-full object-cover bg-black"
+                      onEnded={() => {
+                        setCurrentVideoIndex((prev) =>
+                          prev < videos.length - 1 ? prev + 1 : 0 // loop back to first
+                        );
+                      }}
+                    />
+                  ) : (
+                    <div className="flex h-96 items-center justify-center bg-black text-white">
+                      {t(
+                        "attraction.loadingVideo",
+                        "Loading video…",
+                      )}
+                    </div>
+                  )}
+                  <div className="border-t border-white/10 bg-black/70 px-4 py-3 text-sm text-white flex items-center justify-between">
+                    <span>
+                      {t("attraction.playingVideo", "Playing video")}: {currentVideoIndex + 1} / {videos.length}
+                    </span>
+                    <span>{videos[currentVideoIndex] ? videos[currentVideoIndex].split('/').pop() : ""}</span>
+                  </div>
+                </div>
+
+                {videos.map((videoUrl, index) => {
+                  const isActive = index === currentVideoIndex;
+                  const previewUrl = VIDEO_BASE_URL + videoUrl;
+
+                  return (
+                    <motion.button
+                      key={videoUrl}
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      className={`relative overflow-hidden rounded-3xl border transition-all duration-200 ${isActive
+                          ? "border-teal-500 bg-teal-50 shadow-lg"
+                          : "border-gray-200 bg-white hover:border-teal-300"
+                        }`}
+                      onClick={() => setCurrentVideoIndex(index)}
+                    >
+                      <div className="aspect-[16/9] bg-gray-100">
+                        <video
+                          src={previewUrl}
+                          muted
+                          playsInline
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-2 px-3 py-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          {t("attraction.videoReview", "Video Review")} {index + 1}
+                        </span>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-600 text-white">
+                          <Play className="h-4 w-4" />
+                        </div>
+                      </div>
+                      {isActive && (
+                        <div className="absolute inset-0 rounded-3xl ring-2 ring-teal-500/70" />
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Map Section */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.45 }}
+        className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-6"
+      >
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            {t("attraction.location", "Location")}
+          </h2>
+
+          <div className="relative aspect-[16/9] rounded-xl overflow-hidden border border-gray-100 z-0 bg-gray-50">
+            {mapPosition ? (
+              <MapContainer
+                center={mapPosition}
+                zoom={14}
+                scrollWheelZoom={true} // ✅ enable mouse zoom
+                className="h-full w-full"
+              >
+                {/* SATELLITE DEFAULT TILE LAYER */}
+                <TileLayer
+                  attribution="© Esri, Maxar, Earthstar Geographics"
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                />
+
+                <CircleMarker
+                  center={mapPosition}
+                  radius={8}
+                  pathOptions={{
+                    color: "#0f766e",
+                    fillColor: "#14b8a6",
+                    fillOpacity: 0.85,
+                  }}
+                >
+                  <Popup>
+                    <div className="p-1">
+                      <h3 className="font-semibold text-sm">
+                        {attraction.name}
+                      </h3>
+
+                      {attraction.nameLa && (
+                        <p className="text-xs text-gray-500">
+                          {attraction.nameLa}
+                        </p>
+                      )}
+
+                      <p className="text-xs text-gray-400 mt-1">
+                        {[
+                          attraction.village,
+                          attraction.district,
+                          attraction.province,
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              </MapContainer>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                <p className="text-sm font-medium text-gray-500">
+                  {t(
+                    "attraction.noCoordinates",
+                    "Location coordinates not available",
+                  )}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {[
+                    attraction.village,
+                    attraction.district,
+                    attraction.province,
+                  ]
+                    .filter(Boolean)
+                    .join(", ") ||
+                    t("attraction.noAddress", "No address specified")}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.section>
+
+
+     {/* Reviews Section */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -922,126 +1139,6 @@ export default function AttractionDetailPage() {
           </div>
         </div>
       </motion.section>
-
-      {/* Video Reviews Section */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
-        className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-6"
-      >
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            {t("attraction.videoReviews", "Video Reviews")}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <motion.div
-                key={i}
-                whileHover={{ scale: 1.02 }}
-                className="relative aspect-video rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden flex items-center justify-center group cursor-pointer"
-              >
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-600/90 text-white group-hover:bg-teal-600 transition-colors shadow-lg">
-                  <Play className="h-6 w-6 fill-white ml-1" />
-                </div>
-                <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-                  <span className="text-xs text-gray-500 bg-white/80 backdrop-blur-sm rounded px-2 py-0.5">
-                    {t("attraction.videoReview", "Video Review")} {i}
-                  </span>
-                  <span className="text-xs text-gray-500 bg-white/80 backdrop-blur-sm rounded px-2 py-0.5">
-                    0:{30 + i * 15}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
-
-      {/* Map Section */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.45 }}
-        className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-6"
-      >
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            {t("attraction.location", "Location")}
-          </h2>
-
-          <div className="relative aspect-[16/9] rounded-xl overflow-hidden border border-gray-100 z-0 bg-gray-50">
-            {mapPosition ? (
-              <MapContainer
-                center={mapPosition}
-                zoom={14}
-                scrollWheelZoom={true} // ✅ enable mouse zoom
-                className="h-full w-full"
-              >
-                {/* SATELLITE DEFAULT TILE LAYER */}
-                <TileLayer
-                  attribution="© Esri, Maxar, Earthstar Geographics"
-                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                />
-
-                <CircleMarker
-                  center={mapPosition}
-                  radius={8}
-                  pathOptions={{
-                    color: "#0f766e",
-                    fillColor: "#14b8a6",
-                    fillOpacity: 0.85,
-                  }}
-                >
-                  <Popup>
-                    <div className="p-1">
-                      <h3 className="font-semibold text-sm">
-                        {attraction.name}
-                      </h3>
-
-                      {attraction.nameLa && (
-                        <p className="text-xs text-gray-500">
-                          {attraction.nameLa}
-                        </p>
-                      )}
-
-                      <p className="text-xs text-gray-400 mt-1">
-                        {[
-                          attraction.village,
-                          attraction.district,
-                          attraction.province,
-                        ]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </p>
-                    </div>
-                  </Popup>
-                </CircleMarker>
-              </MapContainer>
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-                <p className="text-sm font-medium text-gray-500">
-                  {t(
-                    "attraction.noCoordinates",
-                    "Location coordinates not available",
-                  )}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {[
-                    attraction.village,
-                    attraction.district,
-                    attraction.province,
-                  ]
-                    .filter(Boolean)
-                    .join(", ") ||
-                    t("attraction.noAddress", "No address specified")}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </motion.section>
-
       {/* Social Share Buttons */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
@@ -1111,11 +1208,10 @@ export default function AttractionDetailPage() {
                   <button
                     key={plan.id}
                     onClick={() => setSelectedPlanId(plan.id)}
-                    className={`w-full text-left p-3 rounded-lg border transition ${
-                      selectedPlanId === plan.id
+                    className={`w-full text-left p-3 rounded-lg border transition ${selectedPlanId === plan.id
                         ? "border-teal-500 bg-teal-50"
                         : "border-gray-200"
-                    }`}
+                      }`}
                   >
                     <div className="font-medium">{plan.name}</div>
                     <div className="text-xs text-gray-500">

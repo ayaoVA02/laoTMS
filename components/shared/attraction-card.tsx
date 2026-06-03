@@ -12,7 +12,7 @@ interface AttractionCardProps {
   attraction: Attraction;
   index?: number;
 }
-
+const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE || "";
 export default function AttractionCard({
   attraction,
   index = 0,
@@ -47,6 +47,7 @@ export default function AttractionCard({
     return stars;
   };
 
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -62,7 +63,7 @@ export default function AttractionCard({
           {/* Image Section */}
           <div className="relative aspect-[4/3] overflow-hidden">
             <Image
-              src={attraction.images[0]}
+              src={IMAGE_BASE_URL + attraction.images[0]}
               alt={attraction.name}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
