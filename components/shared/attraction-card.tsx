@@ -32,18 +32,20 @@ export default function AttractionCard({
     const fullStars = Math.floor(rating);
     const stars = [];
 
+
     for (let i = 0; i < 5; i++) {
+
       stars.push(
         <Star
           key={i}
-          className={`h-3.5 w-3.5 ${
-            i < fullStars
-              ? "fill-amber-400 text-amber-400"
-              : "fill-gray-200 text-gray-200"
-          }`}
+          className={`h-3.5 w-3.5 ${i < fullStars
+            ? "fill-amber-400 text-amber-400"
+            : "fill-gray-200 text-gray-200"
+            }`}
         />
       );
     }
+
     return stars;
   };
 
@@ -75,9 +77,9 @@ export default function AttractionCard({
             <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent" />
 
             {/* Category Badge (Top-Left) */}
-            <span className="absolute left-3 top-3 rounded-full bg-teal-500 px-3 py-1 text-xs font-semibold text-white">
+            {/* <span className="absolute left-3 top-3 rounded-full bg-teal-500 px-3 py-1 text-xs font-semibold text-white">
               {attraction.category}
-            </span>
+            </span> */}
 
             {/* Favorite Heart Button (Top-Right) */}
             <motion.button
@@ -99,11 +101,10 @@ export default function AttractionCard({
                 transition={{ duration: 0.3 }}
               >
                 <Heart
-                  className={`h-5 w-5 transition-colors ${
-                    isFavorite
-                      ? "fill-rose-500 text-rose-500"
-                      : "text-gray-600"
-                  }`}
+                  className={`h-5 w-5 transition-colors ${isFavorite
+                    ? "fill-rose-500 text-rose-500"
+                    : "text-gray-600"
+                    }`}
                 />
               </motion.div>
             </motion.button>
@@ -124,8 +125,20 @@ export default function AttractionCard({
 
             {/* Rating */}
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-0.5">
-                {renderStars(attraction.rating)}
+              <div className="flex items-start gap-0.5">
+
+                {attraction.rating == 0 ? (
+                  
+                    <Star className="h-5 w-5 fill-yellow-500 text-gray-200" />
+                 
+                ) : (
+                  <>
+
+                    {renderStars(attraction.rating)}
+                  </>
+
+                )
+                }
               </div>
               <span className="text-sm font-medium text-gray-700">
                 {attraction.rating.toFixed(1)}

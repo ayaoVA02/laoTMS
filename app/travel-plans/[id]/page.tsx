@@ -26,6 +26,7 @@ import Image from "next/image";
 import { useAuthStore } from "@/stores/auth-store";
 
 import dynamic from "next/dynamic";
+// @ts-ignore
 import "leaflet/dist/leaflet.css";
 
 

@@ -1,0 +1,1326 @@
+[{
+  "_id": {
+    "$oid": "688c713ca49aff66531189fd"
+  },
+  "country_la": "ລາວ",
+  "country_en": "Laos",
+  "country_code": "LA",
+  "country_calling_code": "856",
+  "provinces": [
+    {
+      "province_id": 1,
+      "province_la": "ນະຄອນຫຼວງວຽງຈັນ",
+      "province_en": "Vientiane Prefecture",
+      "districts": [
+        {
+          "district_la": "ເມືອງຈັນທະບູລີ",
+          "district_en": "Chanthabuly District",
+          "_id": {
+            "$oid": "688c713ca49aff66531189ff"
+          }
+        },
+        {
+          "district_la": "ເມືອງສີໂຄດຕະບອງ",
+          "district_en": "Sikhottabong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a00"
+          }
+        },
+        {
+          "district_la": "ເມືອງໄຊເສດຖາ",
+          "district_en": "Xaysetha District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a01"
+          }
+        },
+        {
+          "district_la": "ເມືອງສີສັດຕະນາກ",
+          "district_en": "Sisattanak District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a02"
+          }
+        },
+        {
+          "district_la": "ເມືອງນາຊາຍທອງ",
+          "district_en": "Naxaithong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a03"
+          }
+        },
+        {
+          "district_la": "ເມືອງໄຊທານີ",
+          "district_en": "Xaythany District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a04"
+          }
+        },
+        {
+          "district_la": "ເມືອງຫາດຊາຍຟອງ",
+          "district_en": "Hadxayfong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a05"
+          }
+        },
+        {
+          "district_la": "ເມືອງສັງທອງ",
+          "district_en": "Sangthong district",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a06"
+          }
+        },
+        {
+          "district_la": "ເມືອງປາກງື່ມ",
+          "district_en": "Mayparkngum district",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a07"
+          }
+        }
+      ],
+      "borders": [
+        10,
+        11
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff66531189fe"
+      }
+    },
+    {
+      "province_id": 2,
+      "province_la": "ຜົ້ງສາລີ",
+      "province_en": "Phongsaly Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງຜົ້ງສາລີ",
+          "district_en": "Phongsaly District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a09"
+          }
+        },
+        {
+          "district_la": "ເມືອງໃໝ່",
+          "district_en": "May District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a0a"
+          }
+        },
+        {
+          "district_la": "ເມືອງຂວາ",
+          "district_en": "Khoua District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a0b"
+          }
+        },
+        {
+          "district_la": "ເມືອງສຳພັນ",
+          "district_en": "Samphanh District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a0c"
+          }
+        },
+        {
+          "district_la": "ເມືອງບຸນເໜືອ",
+          "district_en": "Boun Neua District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a0d"
+          }
+        },
+        {
+          "district_la": "ເມືອງຍອດອູ",
+          "district_en": "Yot Ou District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a0e"
+          }
+        },
+        {
+          "district_la": "ເມືອງບຸນໃຕ້",
+          "district_en": "Boun Tay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a0f"
+          }
+        }
+      ],
+      "borders": [
+        3,
+        4,
+        6
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a08"
+      }
+    },
+    {
+      "province_id": 3,
+      "province_la": "ຫຼວງນ້ຳທາ",
+      "province_en": "Luang Namtha Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງຫຼວງນໍ້າທາ",
+          "district_en": "Namtha District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a11"
+          }
+        },
+        {
+          "district_la": "ເມືອງສີງ",
+          "district_en": "Sing District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a12"
+          }
+        },
+        {
+          "district_la": "ເມືອງລອງ",
+          "district_en": "Long District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a13"
+          }
+        },
+        {
+          "district_la": "ເມືອງວຽງພູຄາ",
+          "district_en": "Viengphoukha District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a14"
+          }
+        },
+        {
+          "district_la": "ເມືອງນາແລ",
+          "district_en": "Na Le District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a15"
+          }
+        }
+      ],
+      "borders": [
+        2,
+        4,
+        5
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a10"
+      }
+    },
+    {
+      "province_id": 4,
+      "province_la": "ອຸດົມໄຊ",
+      "province_en": "Oudomxay Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງໄຊ",
+          "district_en": "Xay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a17"
+          }
+        },
+        {
+          "district_la": "ເມືອງຫຼາ",
+          "district_en": "La District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a18"
+          }
+        },
+        {
+          "district_la": "ເມືອງນາໝໍ້",
+          "district_en": "Na Mo District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a19"
+          }
+        },
+        {
+          "district_la": "ເມືອງງາ",
+          "district_en": "Nga District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a1a"
+          }
+        },
+        {
+          "district_la": "ເມືອງແບ່ງ",
+          "district_en": "Beng District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a1b"
+          }
+        },
+        {
+          "district_la": "ເມືອງຮຸນ",
+          "district_en": "Houne District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a1c"
+          }
+        },
+        {
+          "district_la": "ເມືອງປາກແບ່ງ",
+          "district_en": "Pak Beng District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a1d"
+          }
+        }
+      ],
+      "borders": [
+        2,
+        3,
+        5,
+        6,
+        8
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a16"
+      }
+    },
+    {
+      "province_id": 5,
+      "province_la": "ບໍ່ແກ້ວ",
+      "province_en": "Bokeo Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງຫ້ວຍຊາຍ",
+          "district_en": "Houayxay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a1f"
+          }
+        },
+        {
+          "district_la": "ເມືອງຕົ້ນເຜິ້ງ",
+          "district_en": "Ton Pheung District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a20"
+          }
+        },
+        {
+          "district_la": "ເມືອງເມິງ",
+          "district_en": "Meung District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a21"
+          }
+        },
+        {
+          "district_la": "ເມືອງຜາອຸດົມ",
+          "district_en": "Pha Oudom District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a22"
+          }
+        },
+        {
+          "district_la": "ເມືອງປາກທາ",
+          "district_en": "Pak Tha District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a23"
+          }
+        }
+      ],
+      "borders": [
+        3,
+        4,
+        8
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a1e"
+      }
+    },
+    {
+      "province_id": 6,
+      "province_la": "ຫຼວງພະບາງ",
+      "province_en": "Luang Prabang Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງຫຼວງພະບາງ",
+          "district_en": "Luang Prabang District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a25"
+          }
+        },
+        {
+          "district_la": "ເມືອງຊຽງເງິນ",
+          "district_en": "Xiengngeun District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a26"
+          }
+        },
+        {
+          "district_la": "ເມືອງນານ",
+          "district_en": "Nane District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a27"
+          }
+        },
+        {
+          "district_la": "ເມືອງປາກອູ",
+          "district_en": "Pak Ou District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a28"
+          }
+        },
+        {
+          "district_la": "ເມືອງນ້ຳບາກ",
+          "district_en": "Nam Bak District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a29"
+          }
+        },
+        {
+          "district_la": "ເມືອງງອຍ",
+          "district_en": "Ngoy District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a2a"
+          }
+        },
+        {
+          "district_la": "ເມືອງປາກແຊງ",
+          "district_en": "Pak Seng District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a2b"
+          }
+        },
+        {
+          "district_la": "ເມືອງໂພນໄຊ",
+          "district_en": "Phonxay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a2c"
+          }
+        },
+        {
+          "district_la": "ເມືອງຈອມເພັດ",
+          "district_en": "Chomphet District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a2d"
+          }
+        },
+        {
+          "district_la": "ເມືອງວຽງຄຳ",
+          "district_en": "Viengkham District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a2e"
+          }
+        },
+        {
+          "district_la": "ເມືອງພູຄູນ",
+          "district_en": "Phoukhoune District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a2f"
+          }
+        },
+        {
+          "district_la": "ເມືອງໂພນທອງ",
+          "district_en": "Phonthong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a30"
+          }
+        }
+      ],
+      "borders": [
+        2,
+        4,
+        8,
+        10,
+        9,
+        7
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a24"
+      }
+    },
+    {
+      "province_id": 7,
+      "province_la": "ຫົວພັນ",
+      "province_en": "Houaphanh Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງຊຳເໜືອ",
+          "district_en": "Xam Neua District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a32"
+          }
+        },
+        {
+          "district_la": "ເມືອງຊຽງຄໍ້",
+          "district_en": "Xiengkho District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a33"
+          }
+        },
+        {
+          "district_la": "ເມືອງວຽງທອງ",
+          "district_en": "Hiam District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a34"
+          }
+        },
+        {
+          "district_la": "ເມືອງວຽງໄຊ",
+          "district_en": "Viengxay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a35"
+          }
+        },
+        {
+          "district_la": "ເມືອງຫົວເມືອງ",
+          "district_en": "Houameuang District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a36"
+          }
+        },
+        {
+          "district_la": "ເມືອງຊຳໃຕ້",
+          "district_en": "Samtay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a37"
+          }
+        },
+        {
+          "district_la": "ເມືອງສົບເບົາ",
+          "district_en": "Sop Bao District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a38"
+          }
+        },
+        {
+          "district_la": "ເມືອງແອດ",
+          "district_en": "Et District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a39"
+          }
+        },
+        {
+          "district_la": "ເມືອງກອັນ",
+          "district_en": "Kone District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a3a"
+          }
+        },
+        {
+          "district_la": "ເມືອງຊ່ອນ",
+          "district_en": "Xon District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a3b"
+          }
+        }
+      ],
+      "borders": [
+        6,
+        9
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a31"
+      }
+    },
+    {
+      "province_id": 8,
+      "province_la": "ໄຊຍະບູລີ",
+      "province_en": "Sainyabuli Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງໄຊຍະບູລີ",
+          "district_en": "Sainyabuli District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a3d"
+          }
+        },
+        {
+          "district_la": "ເມືອງຄອບ",
+          "district_en": "Khop District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a3e"
+          }
+        },
+        {
+          "district_la": "ເມືອງຫົງສາ",
+          "district_en": "Hongsa District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a3f"
+          }
+        },
+        {
+          "district_la": "ເມືອງເງິນ",
+          "district_en": "Ngeun District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a40"
+          }
+        },
+        {
+          "district_la": "ເມືອງຊຽງຮ່ອນ",
+          "district_en": "Xienghone District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a41"
+          }
+        },
+        {
+          "district_la": "ເມືອງພຽງ",
+          "district_en": "Phiang District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a42"
+          }
+        },
+        {
+          "district_la": "ເມືອງປາກລາຍ",
+          "district_en": "Parklai District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a43"
+          }
+        },
+        {
+          "district_la": "ເມືອງແກ່ນທ້າວ",
+          "district_en": "Kenethao District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a44"
+          }
+        },
+        {
+          "district_la": "ເມືອງບໍ່ແຕນ",
+          "district_en": "Botene District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a45"
+          }
+        },
+        {
+          "district_la": "ເມືອງທົ່ງມີໄຊ",
+          "district_en": "Thongmyxay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a46"
+          }
+        },
+        {
+          "district_la": "ເມືອງໄຊສະຖານ",
+          "district_en": "Xaisathan District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a47"
+          }
+        }
+      ],
+      "borders": [
+        4,
+        5,
+        6,
+        10
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a3c"
+      }
+    },
+    {
+      "province_id": 9,
+      "province_la": "ຊຽງຂວາງ",
+      "province_en": "Xiangkhouang Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງແປກ",
+          "district_en": "Pek District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a49"
+          }
+        },
+        {
+          "district_la": "ເມືອງຄຳ",
+          "district_en": "Kham District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a4a"
+          }
+        },
+        {
+          "district_la": "ເມືອງໜອງແຮດ",
+          "district_en": "Nong Het District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a4b"
+          }
+        },
+        {
+          "district_la": "ເມືອງຄູນ",
+          "district_en": "Khoune District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a4c"
+          }
+        },
+        {
+          "district_la": "ເມືອງໝອກໃໝ່",
+          "district_en": "Mok May District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a4d"
+          }
+        },
+        {
+          "district_la": "ເມືອງພູກູດ",
+          "district_en": "Phou Kout District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a4e"
+          }
+        },
+        {
+          "district_la": "ເມືອງຜາໄຊ",
+          "district_en": "Phaxay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a4f"
+          }
+        }
+      ],
+      "borders": [
+        6,
+        7,
+        11,
+        18,
+        10
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a48"
+      }
+    },
+    {
+      "province_id": 10,
+      "province_la": "ວຽງຈັນ",
+      "province_en": "Vientiane Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງໂພນໂຮງ",
+          "district_en": "Phonhong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a51"
+          }
+        },
+        {
+          "district_la": "ເມືອງທຸລະຄົມ",
+          "district_en": "Thoulakhom District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a52"
+          }
+        },
+        {
+          "district_la": "ເມືອງແກ້ວອຸດົມ",
+          "district_en": "Keo Oudom District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a53"
+          }
+        },
+        {
+          "district_la": "ເມືອງກາສີ",
+          "district_en": "Kasy District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a54"
+          }
+        },
+        {
+          "district_la": "ເມືອງວັງວຽງ",
+          "district_en": "Vangvieng District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a55"
+          }
+        },
+        {
+          "district_la": "ເມືອງເຟືອງ",
+          "district_en": "Feuang District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a56"
+          }
+        },
+        {
+          "district_la": "ເມືອງຊະນະຄາມ",
+          "district_en": "Xanakharm District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a57"
+          }
+        },
+        {
+          "district_la": "ເມືອງແມດ",
+          "district_en": "Mad District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a58"
+          }
+        },
+        {
+          "district_la": "ເມືອງວຽງຄໍາ",
+          "district_en": "Viengkham District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a59"
+          }
+        },
+        {
+          "district_la": "ເມືອງຫີນເຫີບ",
+          "district_en": "Hinhurp District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a5a"
+          }
+        },
+        {
+          "district_la": "ເມືອງໝື່ນ",
+          "district_en": "Meun District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a5b"
+          }
+        }
+      ],
+      "borders": [
+        1,
+        8,
+        6,
+        9,
+        18,
+        11
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a50"
+      }
+    },
+    {
+      "province_id": 11,
+      "province_la": "ບໍລິຄຳໄຊ",
+      "province_en": "Bolikhamsai Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງປາກຊັນ",
+          "district_en": "Pakxan District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a5d"
+          }
+        },
+        {
+          "district_la": "ເມືອງທ່າພະບາດ",
+          "district_en": "Thaphabat District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a5e"
+          }
+        },
+        {
+          "district_la": "ເມືອງປາກກະດິງ",
+          "district_en": "Pakkading District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a5f"
+          }
+        },
+        {
+          "district_la": "ເມືອງບໍລິຄັນ",
+          "district_en": "Borikhane District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a60"
+          }
+        },
+        {
+          "district_la": "ເມືອງຄຳເກີດ",
+          "district_en": "Khamkeut District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a61"
+          }
+        },
+        {
+          "district_la": "ເມືອງວຽງທອງ",
+          "district_en": "Viengthong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a62"
+          }
+        },
+        {
+          "district_la": "ເມືອງໄຊຈຳພອນ",
+          "district_en": "Xaichamphon District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a63"
+          }
+        }
+      ],
+      "borders": [
+        1,
+        10,
+        9,
+        12
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a5c"
+      }
+    },
+    {
+      "province_id": 12,
+      "province_la": "ຄຳມ່ວນ",
+      "province_en": "Khammouane Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງທ່າແຂກ",
+          "district_en": "Thakhek District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a65"
+          }
+        },
+        {
+          "district_la": "ເມືອງມະຫາໄຊ",
+          "district_en": "Mahaxay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a66"
+          }
+        },
+        {
+          "district_la": "ເມືອງໜອງບົກ",
+          "district_en": "Nong Bok District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a67"
+          }
+        },
+        {
+          "district_la": "ເມືອງຫີນບູນ",
+          "district_en": "Hineboune District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a68"
+          }
+        },
+        {
+          "district_la": "ເມືອງຍົມມະລາດ",
+          "district_en": "Yommalath District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a69"
+          }
+        },
+        {
+          "district_la": "ເມືອງບົວລະພາ",
+          "district_en": "Boualapha District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a6a"
+          }
+        },
+        {
+          "district_la": "ມືອງນາກາຍ",
+          "district_en": "Nakai District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a6b"
+          }
+        },
+        {
+          "district_la": "ເມືອງເຊບັ້ງໄຟ",
+          "district_en": "Sebangphay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a6c"
+          }
+        },
+        {
+          "district_la": "ເມືອງໄຊບົວທອງ",
+          "district_en": "Xaibouathong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a6d"
+          }
+        },
+        {
+          "district_la": "ເມືອງຄູນຄຳ",
+          "district_en": "Kounkham District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a6e"
+          }
+        }
+      ],
+      "borders": [
+        11,
+        13
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a64"
+      }
+    },
+    {
+      "province_id": 13,
+      "province_la": "ສະຫວັນນະເຂດ",
+      "province_en": "Savannakhet Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງໄກສອນ ພົມວິຫານ",
+          "district_en": "Kaysone Phomvihane District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a70"
+          }
+        },
+        {
+          "district_la": "ເມືອງອຸທຸມພອນ",
+          "district_en": "Outhoumphone District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a71"
+          }
+        },
+        {
+          "district_la": "ເມືອງອາດສະພັງທອງ",
+          "district_en": "Atsaphangthong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a72"
+          }
+        },
+        {
+          "district_la": "ເມືອງພີນ",
+          "district_en": "Phine District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a73"
+          }
+        },
+        {
+          "district_la": "ເມືອງເຊໂປນ",
+          "district_en": "Seponh District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a74"
+          }
+        },
+        {
+          "district_la": "ເມືອງນອງ",
+          "district_en": "Nong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a75"
+          }
+        },
+        {
+          "district_la": "ເມືອງທ່າປາງທອງ",
+          "district_en": "Thapangthong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a76"
+          }
+        },
+        {
+          "district_la": "ເມືອງສອງຄອນ",
+          "district_en": "Songkhone District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a77"
+          }
+        },
+        {
+          "district_la": "ເມືອງຈຳພອນ",
+          "district_en": "Champhone District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a78"
+          }
+        },
+        {
+          "district_la": "ເມືອງຊົນນະບູລີ",
+          "district_en": "Xonaboury District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a79"
+          }
+        },
+        {
+          "district_la": "ເມືອງໄຊບູລີ",
+          "district_en": "Xayboury District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a7a"
+          }
+        },
+        {
+          "district_la": "ເມືອງວີລະບຸລີ",
+          "district_en": "Viraboury District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a7b"
+          }
+        },
+        {
+          "district_la": "ເມືອງອາດສະພອນ",
+          "district_en": "Assaphone District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a7c"
+          }
+        },
+        {
+          "district_la": "ເມືອງໄຊພູທອງ",
+          "district_en": "Xonboury District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a7d"
+          }
+        },
+        {
+          "district_la": "ເມືອງພະລານໄຊ",
+          "district_en": "Thaphalanxay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a7e"
+          }
+        }
+      ],
+      "borders": [
+        12,
+        14
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a6f"
+      }
+    },
+    {
+      "province_id": 14,
+      "province_la": "ສາລະວັນ",
+      "province_en": "Salavan Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງສາລະວັນ",
+          "district_en": "Saravane District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a80"
+          }
+        },
+        {
+          "district_la": "ເມືອງຕະໂອ້ຍ",
+          "district_en": "Ta Oy District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a81"
+          }
+        },
+        {
+          "district_la": "ເມືອງຕຸ້ມລານ",
+          "district_en": "Toumlane District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a82"
+          }
+        },
+        {
+          "district_la": "ເມືອງລະຄອນເພັງ",
+          "district_en": "Lakhonepheng District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a83"
+          }
+        },
+        {
+          "district_la": "ເມືອງວາປີ",
+          "district_en": "Vapy District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a84"
+          }
+        },
+        {
+          "district_la": "ເມືອງຄົງເຊໂດນ",
+          "district_en": "Khongsedone District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a85"
+          }
+        },
+        {
+          "district_la": "ເມືອງເລົ່າງາມ",
+          "district_en": "Lao Ngam District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a86"
+          }
+        },
+        {
+          "district_la": "ເມືອງສະມ້ວຍ",
+          "district_en": "Sa Mouay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a87"
+          }
+        }
+      ],
+      "borders": [
+        13,
+        15,
+        16
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a7f"
+      }
+    },
+    {
+      "province_id": 15,
+      "province_la": "ເຊກອງ",
+      "province_en": "Sekong Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງລະມາມ",
+          "district_en": "La Mam District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a89"
+          }
+        },
+        {
+          "district_la": "ເມືອງກະເລິມ",
+          "district_en": "Kaleum District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a8a"
+          }
+        },
+        {
+          "district_la": "ເມືອງດາກຈຶງ",
+          "district_en": "Dak Cheung District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a8b"
+          }
+        },
+        {
+          "district_la": "ເມືອງທ່າແຕງ",
+          "district_en": "Tha Teng District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a8c"
+          }
+        }
+      ],
+      "borders": [
+        14,
+        16,
+        17
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a88"
+      }
+    },
+    {
+      "province_id": 16,
+      "province_la": "ຈຳປາສັກ",
+      "province_en": "Champasak Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງປາກເຊ",
+          "district_en": "Pakse District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a8e"
+          }
+        },
+        {
+          "district_la": "ເມືອງຊະນະສົມບູນ",
+          "district_en": "Sanasomboun District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a8f"
+          }
+        },
+        {
+          "district_la": "ເມືອງບາຈຽງຈະເລີນສຸກ",
+          "district_en": "Batiengchaleunsouk District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a90"
+          }
+        },
+        {
+          "district_la": "ເມືອງປາກຊ່ອງ",
+          "district_en": "Paksong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a91"
+          }
+        },
+        {
+          "district_la": "ເມືອງປະທຸມພອນ",
+          "district_en": "Pathouphone District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a92"
+          }
+        },
+        {
+          "district_la": "ເມືອງໂພນທອງ",
+          "district_en": "Phonthong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a93"
+          }
+        },
+        {
+          "district_la": "ເມືອງຈຳປາສັກ",
+          "district_en": "Champassack District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a94"
+          }
+        },
+        {
+          "district_la": "ເມືອງສຸຂຸມາ",
+          "district_en": "Soukhoumma District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a95"
+          }
+        },
+        {
+          "district_la": "ເມືອງມູນລະປະໂມກ",
+          "district_en": "Mounlapamok District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a96"
+          }
+        },
+        {
+          "district_la": "ເມືອງໂຂງ",
+          "district_en": "Khong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a97"
+          }
+        }
+      ],
+      "borders": [
+        14,
+        15,
+        17
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a8d"
+      }
+    },
+    {
+      "province_id": 17,
+      "province_la": "ອັດຕະປື",
+      "province_en": "Attapeu Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງໄຊເຊດຖາ",
+          "district_en": "Saysetha District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a99"
+          }
+        },
+        {
+          "district_la": "ເມືອງສາມັກຄີໄຊ",
+          "district_en": "Samakkhixay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a9a"
+          }
+        },
+        {
+          "district_la": "ເມືອງສະໜາມໄຊ",
+          "district_en": "Sanamxay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a9b"
+          }
+        },
+        {
+          "district_la": "ເມືອງສານໄຊ",
+          "district_en": "Sanxay District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a9c"
+          }
+        },
+        {
+          "district_la": "ເມືອງພູວົງ",
+          "district_en": "Phouvong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a9d"
+          }
+        }
+      ],
+      "borders": [
+        15,
+        16
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a98"
+      }
+    },
+    {
+      "province_id": 18,
+      "province_la": "ໄຊສົມບູນ",
+      "province_en": "Xaisomboun Province",
+      "districts": [
+        {
+          "district_la": "ເມືອງອະນຸວົງ",
+          "district_en": "Anouvong District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118a9f"
+          }
+        },
+        {
+          "district_la": "ເມືອງລ້ອງແຈ້ງ",
+          "district_en": "Longchaeng District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118aa0"
+          }
+        },
+        {
+          "district_la": "ເມືອງລ້ອງຊານ",
+          "district_en": "Longxan District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118aa1"
+          }
+        },
+        {
+          "district_la": "ເມືອງເມືອງຮົ່ມ",
+          "district_en": "Hom District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118aa2"
+          }
+        },
+        {
+          "district_la": "ເມືອງທ່າໂທມ",
+          "district_en": "Thathom District",
+          "_id": {
+            "$oid": "688c713ca49aff6653118aa3"
+          }
+        }
+      ],
+      "borders": [
+        10,
+        9,
+        11,
+        6
+      ],
+      "_id": {
+        "$oid": "688c713ca49aff6653118a9e"
+      }
+    }
+  ],
+  "__v": 0
+}]

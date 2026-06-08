@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload, X, Plus, Share2, MapPin, Clock, DollarSign,
@@ -26,13 +27,11 @@ import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/auth-store";
 import { uploadToR2 } from "@/lib/upload";
 import toast from "react-hot-toast";
-import MapPickerDialog from "@/components/shared/Mappickerdialog";
 
-// ── Dynamic import — no SSR (Leaflet needs window) ───────────────────────────
-// const MapPickerDialog = dynamic(
-//   () => import("@/components/shared/MapPickerDialo"),
-//   { ssr: false }
-// );
+const MapPickerDialog = dynamic(
+  () => import("@/components/shared/Mappickerdialog"),
+  { ssr: false }
+);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PROVINCES = [

@@ -35,10 +35,12 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 };
 
-const R2_BASE = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL;
+const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE || "";
+
 function resolveImage(f?: string | null) {
   if (!f) return "";
-  return f.startsWith("http") ? f : `${R2_BASE}/attractions/images/${f}`;
+  if (f.startsWith("http")) return f;
+  return `${IMAGE_BASE_URL}${f.startsWith("/") ? f.substring(1) : f}`;
 }
 
 function formatDate(d: string | null) {
@@ -176,6 +178,7 @@ export default function PromotionsPage() {
                     const promoCount = promotions.filter(
                       (p) => p.attraction_id === a.attraction_id
                     ).length;
+
                     return (
                       <div
                         key={a.attraction_id}
@@ -183,9 +186,9 @@ export default function PromotionsPage() {
                       >
                         <div className="flex items-center gap-3 mb-2">
                           <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-teal-500/10">
-                            {a.thumbnailUrl ? (
+                            {a.thumbnail_image ? (
                               <img
-                                src={a.thumbnailUrl}
+                                src={resolveImage(a.thumbnail_image)}
                                 alt={a.name_en}
                                 className="w-full h-full object-cover"
                               />

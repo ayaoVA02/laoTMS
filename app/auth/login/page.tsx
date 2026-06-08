@@ -64,7 +64,7 @@ export default function LoginPage() {
   };
 
   const handleDemoLogin = (role: "ADMIN" | "STAFF" | "ENTREPRENEUR" | "TOURIST") => {
-    // loginAsDemo(role);
+    loginAsDemo(role);
     router.push("/dashboard");
   };
 

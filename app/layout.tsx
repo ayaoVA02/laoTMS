@@ -2,9 +2,8 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Providers } from './providers';
-import AuthProvider from './auth-provider';import { Toaster } from "sonner";
+import AuthProvider from './auth-provider';
 
-<Toaster richColors position="top-right" />
 const inter = Inter({ subsets: ['latin'] });
 
 
@@ -38,7 +37,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        {/* <Providers>{children}</Providers> */}
         <Providers>
           <AuthProvider>
             {children}
