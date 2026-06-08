@@ -17,19 +17,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import {
+  Dialog, DialogContent, DialogHeader,
+  DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
 import toast from "react-hot-toast";
 import { Attraction } from "@/data/attractions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-// Update this base URL to your R2 public bucket URL
-const R2_BASE = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL;
+const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE || "";
 
-function resolveImage(filename: string | null | undefined): string {
-  if (!filename) return "";
-  if (filename.startsWith("http")) return filename;
-  return `${R2_BASE}/attractions/images/${filename}`;
+function resolveImage(f?: string | null) {
+  if (!f) return "";
+  if (f.startsWith("http")) return f;
+  return `${IMAGE_BASE_URL}${f.startsWith("/") ? f.substring(1) : f}`;
 }
 
 // ─── Status config ─────────────────────────────────────────────────────────
@@ -103,16 +106,17 @@ function AttractionCard({
   onToggleSocial: (id: string, current: boolean) => void;
   onEdit: (id: string) => void;
 }) {
+  const [showConfirm, setShowConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [toggling, setToggling] = useState(false);
   const status = STATUS_CONFIG[attraction.status] ?? STATUS_CONFIG.draft;
   const StatusIcon = status.icon;
 
-  const handleDelete = async () => {
-    if (!confirm(`Delete "${attraction.name_en}"? This cannot be undone.`)) return;
+  const onConfirmDelete = async () => {
     setDeleting(true);
     await onDelete(attraction.attraction_id);
     setDeleting(false);
+    setShowConfirm(false);
   };
 
   const handleToggle = async () => {
@@ -122,6 +126,7 @@ function AttractionCard({
   };
 
   return (
+    <>
     <motion.div
       layout
       initial={{ opacity: 0, y: 12 }}
@@ -219,7 +224,7 @@ function AttractionCard({
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-red-500"
-            onClick={handleDelete}
+            onClick={() => setShowConfirm(true)}
             disabled={deleting}
             title="Delete"
           >
@@ -232,6 +237,45 @@ function AttractionCard({
         </div>
       </div>
     </motion.div>
+
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="w-5 h-5" />
+              Confirm Deletion
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you sure you want to delete <strong>{attraction.name_en}</strong>?
+              <br />
+              This action is permanent and cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirm(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={onConfirmDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Delete Permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -336,7 +380,7 @@ export default function MyAttractionsPage() {
 
   // ── Navigate to edit ─────────────────────────────────────────────────────
   const handleEdit = (id: string) => {
-    router.push(`/dashboard/attractions/edit/${id}`);
+    router.push(`/dashboard/my-attractions/edit/${id}`);
   };
 
   // ── Filtered list ────────────────────────────────────────────────────────

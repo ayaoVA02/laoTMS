@@ -5,7 +5,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useAttractionStore } from '@/stores/attraction-store';
 import { useTravelPlanStore } from '@/stores/travel-plan-store';
 import { supabase } from '@/lib/supabase';
-import { Toaster } from 'react-hot-toast';
 
 // ── OneSignal types (avoid import errors) ───────────────────────
 declare global {
@@ -18,10 +17,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const initAuth = useAuthStore((s) => s.initAuth);
 
   useEffect(() => {
+    // Initialize authentication first
+    initAuth();
+
     const scriptSrc = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js';
     let addedScript = false;
     let script = document.querySelector<HTMLScriptElement>(`script[src="${scriptSrc}"]`);
 
+    // Only add script if it doesn't already exist
     if (!script) {
       script = document.createElement('script');
       script.src = scriptSrc;
@@ -33,10 +36,16 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async (OneSignal: any) => {
       if (OneSignal.config?.appId) {
-        console.log('⚠️ OneSignal: already initialized, skipping duplicate init');
+        console.log('OneSignal: already initialized');
       } else {
+        const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
+        if (!appId) {
+          console.warn('OneSignal: NEXT_PUBLIC_ONESIGNAL_APP_ID is missing');
+          return;
+        }
+
         await OneSignal.init({
-          appId: process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID!,
+          appId: appId,
           allowLocalhostAsSecureOrigin: true,
           serviceWorkerPath: '/OneSignalSDKWorker.js',
           serviceWorkerUpdaterPath: '/OneSignalSDKUpdaterWorker.js',
@@ -102,19 +111,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         document.head.removeChild(script);
       }
     };
-  }, []);
+  }, [initAuth]);
 
   return (
     <>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: { background: '#333', color: '#fff' },
-          success: { style: { background: '#22c55e', color: '#fff' } },
-          error: { style: { background: '#ef4444', color: '#fff' } },
-        }}
-      />
       {children}
     </>
   );
