@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import  { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth-store';
 
