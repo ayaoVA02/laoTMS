@@ -265,7 +265,6 @@ export default function ApproveAttractionsPage() {
     if (!user) return;
     if (user.role !== "STAFF" && user.role !== "ADMIN") return;
     loadList();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, user?.id, user?.role]);
 
   useEffect(() => {
@@ -310,7 +309,7 @@ export default function ApproveAttractionsPage() {
   return (
     <DashboardLayout title={t("sidebar.approveAttractions")} subtitle="Review and approve submitted attractions">
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
-        {/* Status filters (clickable) */}
+        {/* Status filters */}
         <div className="grid grid-cols-3 gap-3">
           {[
             { key: "pending" as const, label: "Pending", count: counts.pending, icon: Clock, color: "text-amber-500" },
@@ -319,8 +318,8 @@ export default function ApproveAttractionsPage() {
           ].map((s) => (
             <motion.div key={s.key} variants={itemVariants}>
               <Card
-                className={`border-0 shadow-md text-center cursor-pointer hover:shadow-lg transition-shadow ${
-                  filterStatus === s.key ? "ring-2 ring-teal-500/50" : ""
+                className={`border-0 shadow-md text-center cursor-pointer hover:shadow-lg transition-all ${
+                  filterStatus === s.key ? "ring-2 ring-teal-500 bg-teal-500/5" : ""
                 }`}
                 onClick={() => setFilterStatus(s.key)}
               >
@@ -334,29 +333,30 @@ export default function ApproveAttractionsPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
-          {/* List */}
-          <motion.div variants={itemVariants} className="lg:col-span-2">
-            <Card className="border-0 shadow-md h-full">
-              <CardHeader className="pb-3">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+        {/* Master-Detail Layout Panel */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 items-start">
+          {/* List Left Column */}
+          <motion.div variants={itemVariants} className="lg:col-span-2 h-full">
+            <Card className="border-0 shadow-md flex flex-col h-full min-h-[450px]">
+              <CardHeader className="pb-3 border-b">
+                <div className="flex flex-col gap-3">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-teal-500" />
                     {filterStatus[0].toUpperCase() + filterStatus.slice(1)} ({filtered.length})
                   </CardTitle>
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="relative flex-1 sm:flex-none">
+                  <div className="flex items-center gap-2 w-full">
+                    <div className="relative flex-1">
                       <Input
                         placeholder="Search name / location / province..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="h-9 text-sm"
+                        className="h-9 text-sm w-full"
                       />
                     </div>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-9 px-3"
+                      className="h-9 px-3 shrink-0"
                       onClick={handleRefresh}
                       disabled={refreshing || loading}
                       title="Refresh"
@@ -366,29 +366,30 @@ export default function ApproveAttractionsPage() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 flex-1 overflow-y-auto max-h-[600px]">
                 {loading ? (
-                  <div className="py-10 text-center text-sm text-muted-foreground">Loading...</div>
+                  <div className="py-12 text-center text-sm text-muted-foreground">Loading...</div>
                 ) : filtered.length === 0 ? (
-                  <div className="py-10 text-center text-sm text-muted-foreground">No attractions found.</div>
+                  <div className="py-12 text-center text-sm text-muted-foreground">No attractions found.</div>
                 ) : (
                   <div className="space-y-2">
-                    <AnimatePresence>
+                    <AnimatePresence mode="popLayout">
                       {filtered.map((a) => (
                         <motion.div
                           key={a.attraction_id}
                           layout
-                          exit={{ opacity: 0, x: -20 }}
-                          className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                             selected?.attraction_id === a.attraction_id
-                              ? "border-teal-500 bg-teal-500/5"
-                              : "bg-card hover:border-teal-500/30"
+                              ? "border-teal-500 bg-teal-500/5 shadow-sm"
+                              : "bg-card hover:border-teal-500/30 border-transparent"
                           }`}
                           onClick={() => handleSelect(a)}
                         >
                           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500/20 to-emerald-500/20 border border-teal-500/20 flex items-center justify-center shrink-0 overflow-hidden">
                             {a.thumbnail_image ? (
-                              // eslint-disable-next-line @next/next/no-img-element
                               <img src={getR2Url(a.thumbnail_image)} alt={a.name_en || ""} className="w-full h-full object-cover" />
                             ) : (
                               <Building2 className="w-4 h-4 text-teal-500" />
@@ -396,30 +397,29 @@ export default function ApproveAttractionsPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-medium truncate">{a.name_en || "Untitled"}</p>
-                              <Badge variant="outline" className={`${statusBadge[String(a.status)] || ""} text-[10px]`}>
+                              <p className="text-sm font-medium truncate max-w-[140px]">{a.name_en || "Untitled"}</p>
+                              <Badge variant="outline" className={`${statusBadge[String(a.status)] || ""} text-[9px] px-1 py-0`}>
                                 {String(a.status)}
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
-                              <span className="text-xs text-muted-foreground truncate">{a.location || "-"}</span>
+                            <div className="flex items-center gap-1 mt-0.5 text-muted-foreground">
+                              <MapPin className="w-3 h-3 shrink-0" />
+                              <span className="text-xs truncate max-w-[100px]">{a.location || "-"}</span>
+                              <span className="text-muted-foreground/40 mx-0.5">•</span>
                               <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
-                              <span className="text-xs font-medium">{Number(a.rating || 0).toFixed(1)}</span>
-                              <span className="text-[10px] text-muted-foreground">({Number(a.review_count || 0)})</span>
+                              <span className="text-xs font-medium text-foreground">{Number(a.rating || 0).toFixed(1)}</span>
                             </div>
                           </div>
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-8 w-8 shrink-0"
+                            className="h-8 w-8 shrink-0 hover:bg-teal-500/10"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSelect(a);
                             }}
-                            title="View"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-4 h-4 text-muted-foreground" />
                           </Button>
                         </motion.div>
                       ))}
@@ -430,12 +430,12 @@ export default function ApproveAttractionsPage() {
             </Card>
           </motion.div>
 
-          {/* Details */}
-          <motion.div variants={itemVariants} className="lg:col-span-3">
-            <Card className="border-0 shadow-md overflow-hidden">
+          {/* Details Right Column */}
+          <motion.div variants={itemVariants} className="lg:col-span-3 h-full">
+            <Card className="border-0 shadow-md overflow-hidden min-h-[450px] flex flex-col">
               {selected ? (
                 <>
-                  <CardHeader className="pb-3 border-b">
+                  <CardHeader className="pb-3 border-b bg-muted/10">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <CardTitle className="text-base sm:text-lg font-semibold truncate">
@@ -446,7 +446,7 @@ export default function ApproveAttractionsPage() {
                           {entrepreneurNameMap[selected.user_id] ? `• ${entrepreneurNameMap[selected.user_id]}` : ""}
                         </p>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelected(null)} title="Close">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full shrink-0" onClick={() => setSelected(null)} title="Close">
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
@@ -457,40 +457,39 @@ export default function ApproveAttractionsPage() {
                       <Badge variant="outline" className={`${statusBadge[String(selected.status)] || ""} text-[10px]`}>
                         {String(selected.status)}
                       </Badge>
-                      {selected.featured ? (
+                      {selected.featured && (
                         <Badge variant="outline" className="text-[10px] bg-teal-500/10 border-teal-500/25 text-teal-600">
                           <BadgeCheck className="w-3 h-3 mr-1" />
                           Featured
                         </Badge>
-                      ) : null}
+                      )}
                     </div>
                   </CardHeader>
 
-                  <CardContent className="p-4 sm:p-5 space-y-4">
-                    {/* Media */}
+                  <CardContent className="p-4 sm:p-5 space-y-5 flex-1 overflow-y-auto">
+                    {/* Media Layout */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Media</h4>
-                        {media.loading && <span className="text-[10px] text-muted-foreground">Loading...</span>}
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Media Files</h4>
+                        {media.loading && <span className="text-[10px] text-muted-foreground animate-pulse">Loading files...</span>}
                       </div>
 
                       {media.images.length === 0 && media.videos.length === 0 ? (
-                        <div className="p-4 rounded-xl bg-muted/40 border border-dashed text-center text-xs text-muted-foreground">
-                          <ImageIcon className="w-6 h-6 mx-auto mb-2 text-muted-foreground/60" />
-                          No media attached.
+                        <div className="p-6 rounded-xl bg-muted/30 border border-dashed text-center text-xs text-muted-foreground">
+                          <ImageIcon className="w-6 h-6 mx-auto mb-2 text-muted-foreground/40" />
+                          No media attached to this submission.
                         </div>
                       ) : (
-                        <>
+                        <div className="space-y-4">
                           {media.images.length > 0 && (
                             <div>
-                              <div className="flex items-center gap-1.5 text-xs font-medium mb-2">
-                                <ImageIcon className="w-4 h-4 text-teal-500" />
+                              <div className="flex items-center gap-1.5 text-xs font-medium mb-2 text-muted-foreground">
+                                <ImageIcon className="w-3.5 h-3.5 text-teal-500" />
                                 Images ({media.images.length})
                               </div>
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {media.images.slice(0, 9).map((img) => (
-                                  <div key={img} className="rounded-xl overflow-hidden border bg-black/5 aspect-[4/3]">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <div key={img} className="rounded-xl overflow-hidden border bg-muted aspect-[4/3] group relative hover:opacity-90 transition-opacity">
                                     <img src={getR2Url(img)} alt="" className="w-full h-full object-cover" />
                                   </div>
                                 ))}
@@ -500,121 +499,121 @@ export default function ApproveAttractionsPage() {
 
                           {media.videos.length > 0 && (
                             <div>
-                              <div className="flex items-center gap-1.5 text-xs font-medium mb-2">
-                                <Video className="w-4 h-4 text-teal-500" />
+                              <div className="flex items-center gap-1.5 text-xs font-medium mb-2 text-muted-foreground">
+                                <Video className="w-3.5 h-3.5 text-teal-500" />
                                 Videos ({media.videos.length})
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {media.videos.slice(0, 4).map((v) => (
-                                  <div key={v} className="rounded-xl overflow-hidden border bg-black">
-                                    <video src={getR2Url(v)} controls className="w-full h-44 object-cover" />
+                                  <div key={v} className="rounded-xl overflow-hidden border bg-black shadow-inner">
+                                    <video src={getR2Url(v)} controls className="w-full h-40 object-cover" />
                                   </div>
                                 ))}
                               </div>
                             </div>
                           )}
-                        </>
+                        </div>
                       )}
                     </div>
 
                     {/* Description */}
-                    <div>
+                    <div className="bg-muted/20 p-3 rounded-xl border border-muted/40">
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Description</h4>
-                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                        {selected.description || "-"}
+                      <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
+                        {selected.description || "No description provided."}
                       </p>
                     </div>
 
                     {/* Info grid */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 rounded-xl bg-muted/50">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="p-3 rounded-xl bg-muted/40 border border-muted/20">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Address / Direction</p>
                         <p className="text-sm font-semibold mt-0.5 line-clamp-2">{selected.location || "-"}</p>
                       </div>
-                      <div className="p-3 rounded-xl bg-muted/50">
+                      <div className="p-3 rounded-xl bg-muted/40 border border-muted/20">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Province</p>
                         <p className="text-sm font-semibold mt-0.5 line-clamp-1">{selected.province || "-"}</p>
                       </div>
-                      <div className="p-3 rounded-xl bg-muted/50">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Hours</p>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-muted/20">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Operating Hours</p>
                         <p className="text-sm font-semibold mt-0.5">
                           {String(selected.open_time || "08:00").substring(0, 5)} - {String(selected.close_time || "17:00").substring(0, 5)}
                         </p>
                       </div>
-                      <div className="p-3 rounded-xl bg-muted/50">
+                      <div className="p-3 rounded-xl bg-muted/40 border border-muted/20">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entry fee (Foreigner)</p>
-                        <p className="text-sm font-semibold mt-0.5">
-                          {selected.is_free_entry ? "Free" : `${Number(selected.entry_fee_foreigner || 0).toLocaleString()} LAK`}
+                        <p className="text-sm font-semibold mt-0.5 text-teal-600 dark:text-teal-400">
+                          {selected.is_free_entry ? "Free Entry" : `${Number(selected.entry_fee_foreigner || 0).toLocaleString()} LAK`}
                         </p>
                       </div>
                     </div>
 
                     {/* Coordinates */}
-                    <div className="p-3 rounded-xl bg-muted/40 border">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Coordinates</div>
-                        {typeof selected.latitude === "number" && typeof selected.longitude === "number" ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8"
-                            onClick={() => window.open(`https://www.google.com/maps?q=${selected.latitude},${selected.longitude}`, "_blank")}
-                          >
-                            <Navigation className="w-3.5 h-3.5 mr-1.5" />
-                            Open Map
-                          </Button>
-                        ) : null}
+                    <div className="p-3 rounded-xl bg-muted/30 border border-muted/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Geographic Coordinates</div>
+                        <div className="mt-1 font-mono text-xs text-foreground/80">
+                          Lat: {selected.latitude ?? "-"} • Lng: {selected.longitude ?? "-"}
+                        </div>
                       </div>
-                      <div className="mt-2 font-mono text-xs">
-                        Lat: {selected.latitude ?? "-"} • Lng: {selected.longitude ?? "-"}
-                      </div>
+                      {typeof selected.latitude === "number" && typeof selected.longitude === "number" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs shrink-0 bg-background"
+                          onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${selected.latitude},${selected.longitude}`, "_blank")}
+                        >
+                          <Navigation className="w-3.5 h-3.5 mr-1.5 text-teal-500" />
+                          Open Map
+                        </Button>
+                      )}
                     </div>
 
                     {/* Facilities */}
-                    {buildFacilities(selected).length > 0 ? (
+                    {buildFacilities(selected).length > 0 && (
                       <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Facilities</h4>
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Facilities & Activities</h4>
                         <div className="flex flex-wrap gap-1.5">
                           {buildFacilities(selected).map((f) => (
-                            <Badge key={f} variant="outline" className="text-[10px]">
+                            <Badge key={f} variant="secondary" className="text-[10px] bg-muted hover:bg-muted font-normal text-muted-foreground border">
                               {f}
                             </Badge>
                           ))}
                         </div>
                       </div>
-                    ) : null}
+                    )}
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 pt-2 border-t">
+                    <div className="flex items-center gap-3 pt-4 border-t mt-2">
                       <Button
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                         disabled={selected.status === "approved"}
                         onClick={() => updateStatus(selected.attraction_id, "approved")}
                       >
                         <CheckCircle className="w-4 h-4 mr-1.5" />
-                        Approve
+                        Approve Submission
                       </Button>
                       <Button
                         variant="destructive"
-                        className="flex-1"
+                        className="flex-1 shadow-sm"
                         disabled={selected.status === "rejected"}
                         onClick={() => updateStatus(selected.attraction_id, "rejected")}
                       >
                         <AlertTriangle className="w-4 h-4 mr-1.5" />
-                        Reject
+                        Reject Submission
                       </Button>
-                    </div>
-                    <div className="pt-2 text-[10px] text-muted-foreground flex items-center gap-2">
-                      <Eye className="w-3.5 h-3.5" />
-                      Draft items are hidden from this page.
                     </div>
                   </CardContent>
                 </>
               ) : (
-                <CardContent className="p-8 sm:p-12 text-center">
-                  <Eye className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">Select an attraction to view details</p>
-                  <p className="text-xs text-muted-foreground mt-1">Default filter is Pending</p>
+                <CardContent className="flex-1 flex flex-col items-center justify-center p-8 text-center my-auto min-h-[350px]">
+                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4 border">
+                    <Eye className="w-8 h-8 text-muted-foreground/40" />
+                  </div>
+                  <h3 className="text-sm font-medium text-foreground">Select an attraction to view details</h3>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-[240px]">
+                    Choose a item from the left pane queue. Default active filter is set to Pending.
+                  </p>
                 </CardContent>
               )}
             </Card>

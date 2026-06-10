@@ -68,11 +68,6 @@ const roleMenuItems: Record<UserRole, MenuItem[]> = {
       icon: Tag,
     },
     {
-      href: "/dashboard/manage-content",
-      labelKey: "sidebar.manageContent",
-      icon: FileText,
-    },
-    {
       href: "/dashboard/notifications",
       labelKey: "sidebar.notifications",
       icon: Bell,
