@@ -8,7 +8,6 @@ import {
   XCircle,
   AlertTriangle,
   Eye,
-  Trash2,
   Clock,
   Share2,
   Info,
@@ -34,34 +33,6 @@ const typeConfig: Record<
   string,
   { icon: React.ElementType; accent: string; bg: string; border: string; iconColor: string }
 > = {
-  approved: {
-    icon: CheckCircle,
-    accent: "text-teal-600 dark:text-teal-400",
-    bg: "bg-teal-50 dark:bg-teal-950/40",
-    border: "border-l-teal-500",
-    iconColor: "text-teal-500",
-  },
-  rejected: {
-    icon: XCircle,
-    accent: "text-red-600 dark:text-red-400",
-    bg: "bg-red-50 dark:bg-red-950/40",
-    border: "border-l-red-500",
-    iconColor: "text-red-500",
-  },
-  update_reminder: {
-    icon: AlertTriangle,
-    accent: "text-amber-600 dark:text-amber-400",
-    bg: "bg-amber-50 dark:bg-amber-950/40",
-    border: "border-l-amber-500",
-    iconColor: "text-amber-500",
-  },
-  auto_hidden: {
-    icon: Eye,
-    accent: "text-slate-600 dark:text-slate-400",
-    bg: "bg-slate-50 dark:bg-slate-900/40",
-    border: "border-l-slate-400",
-    iconColor: "text-slate-400",
-  },
   social_post: {
     icon: Share2,
     accent: "text-blue-600 dark:text-blue-400",
@@ -111,9 +82,10 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      fetchNotifications(user.id);
+      // Pass 'tourist' flag explicitly
+      fetchNotifications(user.id, 'tourist');
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, fetchNotifications]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
@@ -143,7 +115,10 @@ export default function NotificationsPage() {
   };
 
   const handleMarkAllRead = () => {
-    markAllAsRead();
+    if (user?.id) {
+      // Explicit tourist filtration contextual parameters
+      markAllAsRead(user.id, 'tourist');
+    }
   };
 
   const handleClickNotification = (id: string, isRead: boolean) => {
@@ -177,10 +152,7 @@ export default function NotificationsPage() {
                   )}
                 </h1>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {t(
-                    "notifications.subtitle",
-                    "Stay updated with your latest activities"
-                  )}
+                  {t("notifications.subtitle", "Stay updated with your latest activities")}
                 </p>
               </div>
             </div>
@@ -216,9 +188,7 @@ export default function NotificationsPage() {
                 <div>
                   <p className="text-sm font-medium">Push Notifications</p>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    {pushEnabled
-                      ? "Receiving real-time push alerts"
-                      : "Enable to get real-time push alerts"}
+                    {pushEnabled ? "Receiving real-time push alerts" : "Enable to get real-time push alerts"}
                   </p>
                 </div>
               </div>
@@ -257,10 +227,7 @@ export default function NotificationsPage() {
               {t("notifications.empty", "No notifications")}
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
-              {t(
-                "notifications.emptyDescription",
-                "You're all caught up. New notifications will appear here."
-              )}
+              {t("notifications.emptyDescription", "You're all caught up. New notifications will appear here.")}
             </p>
           </motion.div>
         ) : (
@@ -279,63 +246,32 @@ export default function NotificationsPage() {
                     exit="exit"
                     transition={{ duration: 0.3, delay: index * 0.05 }}
                     layout
-                    onClick={() =>
-                      handleClickNotification(notification.id, notification.read)
-                    }
+                    onClick={() => handleClickNotification(notification.id, notification.read)}
                     className={`group relative flex items-start gap-4 p-4 rounded-xl border-l-4 cursor-pointer transition-all duration-200 ${config.border} ${
                       notification.read
                         ? "bg-white dark:bg-slate-900 border-r border-t border-b border-slate-200 dark:border-slate-800"
                         : `${config.bg} border-r border-t border-b border-slate-100 dark:border-slate-800`
                     } hover:shadow-md`}
                   >
-                    {/* Icon */}
-                    <div
-                      className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
-                        notification.read
-                          ? "bg-slate-100 dark:bg-slate-800"
-                          : config.bg
-                      }`}
-                    >
-                      <Icon
-                        className={`w-5 h-5 ${
-                          notification.read
-                            ? "text-slate-400 dark:text-slate-500"
-                            : config.iconColor
-                        }`}
-                      />
+                    <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${notification.read ? "bg-slate-100 dark:bg-slate-800" : config.bg}`}>
+                      <Icon className={`w-5 h-5 ${notification.read ? "text-slate-400 dark:text-slate-500" : config.iconColor}`} />
                     </div>
 
-                    {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <h3
-                            className={`text-sm font-semibold leading-tight ${
-                              notification.read
-                                ? "text-slate-500 dark:text-slate-400"
-                                : "text-slate-900 dark:text-white"
-                            }`}
-                          >
+                          <h3 className={`text-sm font-semibold leading-tight ${notification.read ? "text-slate-500 dark:text-slate-400" : "text-slate-900 dark:text-white"}`}>
                             {notification.title}
                           </h3>
-                          <p
-                            className={`mt-1 text-sm leading-relaxed ${
-                              notification.read
-                                ? "text-slate-400 dark:text-slate-500"
-                                : "text-slate-600 dark:text-slate-300"
-                            }`}
-                          >
+                          <p className={`mt-1 text-sm leading-relaxed ${notification.read ? "text-slate-400 dark:text-slate-500" : "text-slate-600 dark:text-slate-300"}`}>
                             {notification.message}
                           </p>
                         </div>
-
-                        {/* Unread indicator */}
                         {!notification.read && (
                           <div className="shrink-0 w-2.5 h-2.5 rounded-full bg-teal-500 mt-1.5" />
                         )}
                       </div>
 
-                      {/* Timestamp */}
                       <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
                         <Clock className="w-3 h-3" />
                         <span>{formatTimeAgo(notification.createdAt)}</span>

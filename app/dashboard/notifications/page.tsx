@@ -48,6 +48,7 @@ const typeConfig: Record<string, { icon: React.ElementType; color: string }> = {
 
 export default function DashboardNotificationsPage() {
   const { t } = useTranslation();
+  const { user, isAuthenticated } = useAuthStore();
   const {
     notifications = [],
     unreadCount,
@@ -55,7 +56,6 @@ export default function DashboardNotificationsPage() {
     markAllAsRead,
     fetchNotifications,
   } = useNotificationStore();
-  const { user, isAuthenticated } = useAuthStore();
   const [mounted, setMounted] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushSupported, setPushSupported] = useState(false);
@@ -66,7 +66,7 @@ export default function DashboardNotificationsPage() {
     if (isAuthenticated && user) {
       fetchNotifications(user.id);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, fetchNotifications]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
@@ -163,7 +163,9 @@ export default function DashboardNotificationsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={markAllAsRead}
+            // FIXED: Passing user.id here to let Supabase filter the right data rows
+            onClick={() => user && markAllAsRead(user.id)}
+            disabled={!user || unreadCount === 0}
             className="gap-1.5"
           >
             <CheckCheck className="w-4 h-4" />
@@ -194,7 +196,8 @@ export default function DashboardNotificationsPage() {
                         className={`flex items-start gap-3 p-3 sm:p-4 hover:bg-muted/30 transition-colors cursor-pointer ${
                           !n.read ? "bg-teal-500/5" : ""
                         }`}
-                        onClick={() => markAsRead(n.id)}
+                        // FIXED: Added an optimization check so clicking already-read cards doesn't repeat API calls
+                        onClick={() => !n.read && markAsRead(n.id)}
                       >
                         <div
                           className={`mt-0.5 p-1.5 sm:p-2 rounded-lg bg-muted shrink-0 ${color}`}

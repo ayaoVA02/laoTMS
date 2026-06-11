@@ -45,9 +45,18 @@ export default function Navbar() {
   const { theme, setTheme } = useTheme();
   const { t, i18n } = useTranslation();
   const { user, isAuthenticated, logout } = useAuthStore();
-  const { language, setLanguage } = useAppStore();
+  const { language, setLanguage, viewMode } = useAppStore();
   const { unreadCount } = useNotificationStore();
   const router = useRouter();
+
+  // Bell destination: tourists (real role or preview mode) → /notifications
+  // Staff/Admin/Entrepreneur in role view → /dashboard/notifications
+  const role = user?.role ?? "TOURIST";
+  const isTouristContext = role === "TOURIST" || viewMode === "TOURIST";
+  const notificationHref = isTouristContext
+    ? "/notifications"
+    : "/dashboard/notifications";
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -101,7 +110,7 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop Nav Links - hidden on mobile (tab bar replaces) */}
+          {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-1 ml-8">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
@@ -136,7 +145,7 @@ export default function Navbar() {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-1 sm:gap-2">
-            {/* Language Switcher - hidden on very small screens */}
+            {/* Language Switcher */}
             <div className="relative hidden sm:block" ref={langDropdownRef}>
               <Button
                 variant="ghost"
@@ -160,20 +169,22 @@ export default function Navbar() {
                   >
                     <button
                       onClick={() => handleLanguageToggle("en")}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${language === "en"
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${
+                        language === "en"
                           ? "text-teal-500 font-medium"
                           : "text-muted-foreground"
-                        }`}
+                      }`}
                     >
                       <span className="text-base">GB</span>
                       English
                     </button>
                     <button
                       onClick={() => handleLanguageToggle("la")}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${language === "la"
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${
+                        language === "la"
                           ? "text-teal-500 font-medium"
                           : "text-muted-foreground"
-                        }`}
+                      }`}
                     >
                       <span className="text-base">LA</span>
                       Lao
@@ -183,14 +194,29 @@ export default function Navbar() {
               </AnimatePresence>
             </div>
 
-            {/* Notification Bell */}
-            <Link href="/notifications">
+            {/* Notification Bell — destination depends on role/viewMode */}
+            <Link href={notificationHref}>
               <Button
                 variant="ghost"
                 size="sm"
-                className="relative text-muted-foreground hover:text-teal-500"
+                className={`relative transition-colors ${
+                  pathname === notificationHref
+                    ? "text-teal-500"
+                    : "text-muted-foreground hover:text-teal-500"
+                }`}
               >
-                <Bell className="w-4 h-4" />
+                <Bell
+                  className={`w-4 h-4 ${
+                    pathname === notificationHref ? "fill-teal-500/20" : ""
+                  }`}
+                />
+                {pathname === notificationHref && (
+                  <motion.div
+                    layoutId="activeNavIndicator"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
                 {unreadCount > 0 && (
                   <motion.span
                     initial={{ scale: 0 }}
@@ -248,8 +274,9 @@ export default function Navbar() {
                     <User className="w-4 h-4 text-white" />
                   </div>
                   <ChevronDown
-                    className={`w-3.5 h-3.5 transition-transform hidden sm:block ${userDropdownOpen ? "rotate-180" : ""
-                      }`}
+                    className={`w-3.5 h-3.5 transition-transform hidden sm:block ${
+                      userDropdownOpen ? "rotate-180" : ""
+                    }`}
                   />
                 </Button>
                 <AnimatePresence>
@@ -322,7 +349,7 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Mobile Menu Toggle - only for non-authenticated users on mobile */}
+            {/* Mobile Menu Toggle - only for non-authenticated users */}
             {!isAuthenticated && (
               <Button
                 variant="ghost"
@@ -363,10 +390,11 @@ export default function Navbar() {
                   >
                     <Link
                       href={link.href}
-                      className={`flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
+                      className={`flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        isActive
                           ? "bg-teal-500/10 text-teal-500"
                           : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                        }`}
+                      }`}
                     >
                       {t(link.labelKey)}
                     </Link>
