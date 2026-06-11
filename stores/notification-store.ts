@@ -15,45 +15,95 @@ interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
   loading: boolean;
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
-  addNotification: (n: Notification) => void;
-  fetchNotifications: (userId: string) => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: (userId: string, role?: string) => Promise<void>;
+  addNotification: (n: Notification, role?: string) => void;
+  fetchNotifications: (userId: string, role?: string) => Promise<void>;
 }
 
-export const useNotificationStore = create<NotificationState>((set) => ({
+export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
   loading: false,
 
-  markAsRead: (id) =>
-    set((s) => {
-      const notifications = (s.notifications || []).map((n) =>
-        n.id === id ? { ...n, read: true } : n
-      );
-      return { notifications, unreadCount: notifications.filter((n) => !n.read).length };
-    }),
+  markAsRead: async (id) => {
+    const currentNotifications = get().notifications || [];
+    const updatedNotifications = currentNotifications.map((n) =>
+      n.id === id ? { ...n, read: true } : n
+    );
+    
+    set({ 
+      notifications: updatedNotifications, 
+      unreadCount: updatedNotifications.filter((n) => !n.read).length 
+    });
 
-  markAllAsRead: () =>
-    set((s) => ({
-      notifications: (s.notifications || []).map((n) => ({ ...n, read: true })),
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('notification_id', id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error("Failed to mark notification as read in database:", err);
+    }
+  },
+
+  markAllAsRead: async (userId, role) => {
+    if (!userId) return;
+
+    const currentNotifications = get().notifications || [];
+    const updatedNotifications = currentNotifications.map((n) => ({ ...n, read: true }));
+    
+    set({
+      notifications: updatedNotifications,
       unreadCount: 0,
-    })),
+    });
 
-  addNotification: (n) =>
+    try {
+      let query = supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', userId)
+        .eq('read', false);
+
+      // Lock down tourist actions on backend entries
+      if (role === 'tourist') {
+        query = query.in('type', ['social_post', 'info']);
+      }
+
+      const { error } = await query;
+      if (error) throw error;
+    } catch (err) {
+      console.error("Failed to mark all notifications as read in database:", err);
+    }
+  },
+
+  addNotification: (n, role) => {
+    // Realtime streaming filtration rule
+    if (role === 'tourist' && !['social_post', 'info'].includes(n.type)) {
+      return; 
+    }
     set((s) => ({
       notifications: [n, ...(s.notifications || [])],
       unreadCount: (s.unreadCount || 0) + 1,
-    })),
+    }));
+  },
 
-  fetchNotifications: async (userId: string) => {
+  fetchNotifications: async (userId, role) => {
     set({ loading: true });
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .eq('user_id', userId);
+
+      // Apply filtering rule if user role is specifically 'tourist'
+      if (role === 'tourist') {
+        query = query.in('type', ['social_post', 'info']);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) { set({ loading: false }); return; }
 
