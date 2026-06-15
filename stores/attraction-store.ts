@@ -309,7 +309,9 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
 
   fetchTypes: async () => {
     try {
-      const { data } = await supabase.from('types').select('*').eq('is_active', true).order('name_en');
+      const { data } = await supabase.from('types').select('*').eq('is_active', true);
+
+      console.log("Fetched types:", data); // Debug: log fetched types
       if (data) {
         set({ types: data.map((t) => ({ id: t.type_id, name_en: t.name_en, name_la: t.name_la, icon: t.type_icon, is_active: t.is_active })) });
       }

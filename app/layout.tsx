@@ -1,46 +1,27 @@
+// app/layout.tsx
 import './globals.css';
-import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Providers } from './providers';
-import AuthProvider from './auth-provider';
 
 const inter = Inter({ subsets: ['latin'] });
 
-
-export const metadata: Metadata = {
-  title: 'LaoTMS - Lao Tourism Management System',
-  description: 'Discover the beauty of Laos. Explore attractions, plan trips, and manage tourism with LaoTMS.',
-  openGraph: {
-    title: 'LaoTMS - Lao Tourism Management System',
-    description: 'Discover the beauty of Laos',
-    images: [
-      {
-        url: 'https://bolt.new/static/og_default.png',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    images: [
-      {
-        url: 'https://bolt.new/static/og_default.png',
-      },
-    ],
+export const metadata = {
+  title: 'LaoTMS',
+  description: 'Laos Tourism Management System',
+  icons: {
+    icon: '/assets/images/logoLaoTMS.png',
+    shortcut: '/assets/images/logoLaoTMS.png',
+    apple: '/assets/images/logoLaoTMS.png',
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      
       <body className={inter.className}>
         <Providers>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+          {children}
         </Providers>
       </body>
     </html>

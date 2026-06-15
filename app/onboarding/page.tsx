@@ -122,8 +122,10 @@ export default function OnboardingPage() {
   useEffect(() => {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+
+      console.log("OnboardingPage session:", session?.access_token); // Debug: log session info
       if (!session) {
-        router.push('/auth/login');
+        router.push('/auth/login'); // Redirect to login if no session is found
         return;
       }
       setSessionUser(session.user);
@@ -228,13 +230,14 @@ export default function OnboardingPage() {
 
     setSaving(true);
     try {
-      // ✅ STEP 1: Save role to auth metadata FIRST
+      // ✅ STEP 1: Save role and completion status to auth metadata
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
           role: selectedRole,
           is_active: true,
           first_name: firstName,
           last_name: lastName,
+          onboarding_completed: true, // This flag is used by middleware
         }
       });
 
@@ -349,7 +352,7 @@ export default function OnboardingPage() {
     ? { icon: '🧳', label: 'Tourist', color: 'from-teal-500 to-cyan-500' }
     : { icon: '🏢', label: 'Entrepreneur', color: 'from-emerald-500 to-green-500' };
 
-
+  // Fix: Show loader while loading, not after it finishes
   if (loadingSession) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/20 flex items-center justify-center">
@@ -588,13 +591,6 @@ export default function OnboardingPage() {
                 <><Check className="w-4 h-4 mr-2" /> Complete profile<ChevronRight className="w-4 h-4 ml-1" /></>
               )}
             </Button>
-
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors text-center"
-            >
-              Skip for now
-            </button>
           </div>
         </div>
 

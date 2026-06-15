@@ -5,11 +5,13 @@ import { motion } from "framer-motion";
 import { Building2, Search, Star, MapPin, Eye, Edit, Trash2, MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAttractionStore } from "@/stores/attraction-store";
+import { useAuthStore } from "@/stores/auth-store";
 import DashboardLayout from "@/components/shared/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
 
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.06 } } };
 const itemVariants = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
@@ -23,15 +25,29 @@ const statusBadge: Record<string, string> = {
 export default function DashboardAttractionsPage() {
   const { t } = useTranslation();
   const { attractions = [] } = useAttractionStore();
+  const { isAuthenticated } = useAuthStore();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+
   useEffect(() => { setMounted(true); }, []);
 
   const localAttractions = attractions;
   const filtered = localAttractions.filter((a) => {
     const matchSearch = a.name.toLowerCase().includes(search.toLowerCase()) || a.location.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === "all" || a.status === filterStatus;
+
+    // 12-month freshness check
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    const lastUpdate = new Date((a as any).updated_at || (a as any).created_at);
+    const isFresh = lastUpdate >= oneYearAgo;
+
+    // Auto-hide rule: Only show Approved and Recent items when filter is "all"
+    if (filterStatus === "all") {
+      return matchSearch && a.status === "approved" && isFresh;
+    }
     return matchSearch && matchStatus;
   });
 

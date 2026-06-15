@@ -2,7 +2,9 @@
 
 import { Globe, Mail, Phone, MapPin, Heart } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useTranslation } from "react-i18next";
+import { logoLaoTMS } from "@/assets";
 
 const quickLinks = [
   { href: "/", labelKey: "nav.home" },
@@ -29,8 +31,13 @@ export default function Footer() {
           {/* Column 1: Logo & Description */}
           <div className="sm:col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-                <Globe className="w-5 h-5 text-white" />
+              <div className="relative w-9 h-9 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center overflow-hidden">
+                <Image
+                  src={logoLaoTMS}
+                  alt="LaoTMS"
+                  fill
+                  className="object-contain p-1"
+                />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
                 LaoTMS

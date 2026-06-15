@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Building2, Menu, User, ShieldCheck, Users, Briefcase, Eye } from "lucide-react";
+import { User, ShieldCheck, Users, Briefcase, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuthStore, type User as AuthUser } from "@/stores/auth-store";
 import { useTravelPlanStore } from "@/stores/travel-plan-store";
 import { useAttractionStore } from "@/stores/attraction-store";
-import { attractions, type Attraction } from "@/data/attractions";
+import { type Attraction } from "@/data/attractions";
 import Sidebar from "@/components/layout/sidebar";
 import { useAppStore, type ViewMode } from "@/stores/app-store";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import AdminDashboard from "./admin-dashboard/page";
 import StaffDashboard from "./staff-dashboard/page";
 import EntrepreneurDashboard from "./entrepreneur-dashboard/page";
 import TouristDashboard from "./tourist-dashboard/page";
+import LoginRequired from "@/components/shared/login-required";
 
 interface ReviewItem {
   id: string;
@@ -80,6 +82,36 @@ export default function DashboardPage() {
     }
   };
 
+  // Fetch Real Attraction Data from Supabase
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+
+    const fetchAttractions = async () => {
+      let query = supabase.from("attractions").select("*");
+
+      // Filter by user_id if entrepreneur
+      if (role === "ENTREPRENEUR") {
+        query = query.eq("user_id", user.id);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching attractions:", error);
+      } else if (data) {
+        setLocalAttractions(data as Attraction[]);
+        // Initialize social share states
+        const states = data.reduce(
+          (acc, a) => ({ ...acc, [a.attraction_id]: a.social_share }),
+          {} as Record<string, boolean>,
+        );
+        setSocialShareStates(states);
+      }
+    };
+
+    fetchAttractions();
+  }, [isAuthenticated, user?.id, role]);
+
   useEffect(() => {
     if (!isAuthenticated || !user?.id) { 
       setMyReviews([]); 
@@ -137,30 +169,34 @@ export default function DashboardPage() {
       prev.map((a) => a.attraction_id === updated.attraction_id ? updated : a)
     );
 
-  const handleToggleSocialShare = (id: string) =>
-    setSocialShareStates((prev) => ({ ...prev, [id]: !prev[id] }));
+  const handleToggleSocialShare = async (id: string) => {
+    const newState = !socialShareStates[id];
+    const { error } = await supabase
+      .from("attractions")
+      .update({ social_share: newState })
+      .eq("attraction_id", id);
 
-  if (!isAuthenticated) {
+    if (!error) {
+      setSocialShareStates((prev) => ({ ...prev, [id]: newState }));
+    }
+  };
+
+
+  // useEffect(() => {
+  //   if (isAuthReady && !isAuthenticated) {
+  //     router.push("/auth/login");
+  //   }
+  // }, [isAuthReady, isAuthenticated]);
+  if ( !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/20 flex items-center justify-center p-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-md">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-            <Building2 className="w-8 h-8 text-white" />
-          </div>
-          <h2 className="text-xl sm:text-2xl font-bold mb-2">Welcome to LaoTMS Dashboard</h2>
-          <p className="text-sm text-muted-foreground mb-6">Sign in to access your personalized dashboard.</p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button asChild className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white">
-              <a href="/auth/login">Sign In</a>
-            </Button>
-            <Button asChild variant="outline" className="border-teal-500/30 text-teal-600 hover:bg-teal-500/10">
-              <a href="/auth/register">Create Account</a>
-            </Button>
-          </div>
-        </motion.div>
-      </div>
-    );
+      <LoginRequired
+        title="Dashboard access required"
+        description="Sign in to manage your attractions and view analytics."
+        redirectTo="/dashboard"
+      />
+    )
   }
+
 
   const canSwitch = CAN_SWITCH.includes(role);
   const activeView = canSwitch ? localViewMode : "ROLE";
@@ -207,6 +243,7 @@ export default function DashboardPage() {
         );
     }
   };
+
 
   const RoleIcon = roleLabel[role]?.icon ?? User;
 
@@ -268,7 +305,7 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
+                {/* <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="icon"

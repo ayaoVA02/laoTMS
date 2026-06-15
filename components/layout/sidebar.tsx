@@ -22,8 +22,10 @@ import { useAuthStore, type UserRole } from "@/stores/auth-store";
 import { useAppStore, type TouristTab } from "@/stores/app-store";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
+import { logoLaoTMS } from "@/assets";
 
 interface MenuItem {
   href: string;
@@ -136,8 +138,14 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
                 exit={{ opacity: 0 }}
                 className="flex items-center gap-2.5"
               >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shrink-0">
-                  <Map className="w-4.5 h-4.5 text-white" />
+                <div className="relative w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shrink-0 overflow-hidden">
+                  <Image
+                    src={logoLaoTMS}
+                    alt="LaoTMS"
+                    fill
+                    className="object-contain p-1"
+                    priority
+                  />
                 </div>
                 <span className="text-lg font-bold bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
                   LaoTMS
@@ -151,8 +159,13 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
                 exit={{ opacity: 0 }}
                 className="flex items-center justify-center w-full"
               >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-                  <Map className="w-4.5 h-4.5 text-white" />
+                <div className="relative w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center overflow-hidden">
+                  <Image
+                    src={logoLaoTMS}
+                    alt="LaoTMS"
+                    fill
+                    className="object-contain p-1"
+                  />
                 </div>
               </motion.div>
             )}

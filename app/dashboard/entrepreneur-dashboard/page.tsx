@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Building2,
@@ -12,32 +12,58 @@ import {
   Share2,
   Plus,
   BarChart3,
+  Calendar,
+  Tag,
+  RefreshCw,
+  AlertCircle,
+
+  DollarSign,
+  Percent,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/stores/auth-store";
 import type { Attraction } from "@/data/attractions";
+import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import Image from "next/image";
+import { useRouter } from 'next/navigation';
+const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE || "";
+
+function resolveImage(f?: string | null) {
+  if (!f) return "";
+  if (f.startsWith("http")) return f;
+  return `${IMAGE_BASE_URL}${f.startsWith("/") ? f.substring(1) : f}`;
+}
+
+function formatDate(d: string | null) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-GB", {
+    day: "numeric", month: "short", year: "numeric",
+  });
+}
+
+function statusOf(p: { is_active: boolean; d_start: string | null; d_end: string | null }) {
+  if (!p.is_active) return "inactive";
+  const now = Date.now();
+  if (p.d_start && new Date(p.d_start).getTime() >= now) return "upcoming";
+  if (p.d_end) {
+    const daysLeft = (new Date(p.d_end).getTime() - now) / 86_400_000;
+    if (daysLeft < 0) return "expired";
+    if (daysLeft < 2) return "expiring";
+  }
+  return "active";
+}
+
+const statusColors: Record<string, string> = {
+  active:   "bg-emerald-500/15 text-emerald-600 border-emerald-500/25",
+  expiring: "bg-amber-500/15 text-amber-600 border-amber-500/25",
+  expired:  "bg-slate-500/15 text-slate-500 border-slate-500/25",
+  inactive: "bg-slate-500/15 text-slate-400 border-slate-500/25",
+};
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -73,22 +99,63 @@ export default function EntrepreneurDashboard({
   socialShareStates,
   onToggleSocialShare,
   onDeleteAttraction,
-  onEditAttraction,
+
 }: EntrepreneurDashboardProps) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
 
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingAttraction, setEditingAttraction] = useState<Attraction | null>(null);
 
-  const handleEditSave = () => {
-    if (!editingAttraction) return;
-    onEditAttraction(editingAttraction);
-    setEditDialogOpen(false);
-    setEditingAttraction(null);
-  };
+  const [recentPromotions, setRecentPromotions] = useState<any[]>([]);
+  const [loadingPromos, setLoadingPromos] = useState(true);
+  const [promoError, setPromoError] = useState<string | null>(null);
 
-  const thumbnailFor = (a: Attraction) => a.thumbnailUrl || a.thumbnail_image || null;
+  // Get Top 5 High Rating Attractions
+  const topAttractions = useMemo(() => {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    return [...myAttractions]
+      .filter((a) => {
+        const lastUpdate = new Date(a.updated_at || a.created_at);
+        return a.status === "approved" && lastUpdate >= oneYearAgo;
+      })
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+      .slice(0, 5);
+  }, [myAttractions]);
+
+
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      if (!user?.id) return;
+      setLoadingPromos(true);
+      setPromoError(null);
+      const { data, error } = await supabase
+        .from("promotions")
+        .select("*, attractions(name_en, thumbnail_image)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (error) {
+        setPromoError(error.message);
+      } else if (data) {
+        setRecentPromotions(data.map(p => ({
+          ...p,
+          attraction_name: (p.attractions as any)?.name_en,
+          attraction_thumbnail: (p.attractions as any)?.thumbnail_image,
+        })));
+      }
+      setLoadingPromos(false);
+    };
+    fetchPromotions();
+  }, [user?.id]);
+
+
+
+
+  const router = useRouter();
+
+  const thumbnailFor = (a: Attraction) => resolveImage(a.thumbnail_image);
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
@@ -168,7 +235,7 @@ export default function EntrepreneurDashboard({
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-muted-foreground hover:text-teal-600"
-                          onClick={() => { setEditingAttraction({ ...a }); setEditDialogOpen(true); }}
+                          onClick={() => router.push(`/dashboard/my-attractions/edit/${a.attraction_id}`) /* Navigate to edit page */}
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </Button>
@@ -184,15 +251,21 @@ export default function EntrepreneurDashboard({
 
       <motion.div variants={itemVariants}>
         <Card className="border-0 shadow-md">
-          <CardHeader className="pb-2 sm:pb-4">
-            <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+          <CardHeader className="pb-2 sm:pb-4 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
               <Building2 className="w-5 h-5 text-teal-500" />
-              {t("dashboard.myAttractions")}
-            </CardTitle>
+              <CardTitle className="text-base sm:text-lg font-semibold">
+                Top Rated Attractions
+              </CardTitle>
+            </div>
+            <Button onClick={() => router.push('/dashboard/create-attraction')} size="sm" className="bg-teal-600 hover:bg-teal-700 text-white gap-2">
+              <Plus className="w-4 h-4" />
+              Add Attraction
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {myAttractions.map((attraction) => {
+              {topAttractions.map((attraction) => {
                 const thumb = thumbnailFor(attraction);
                 return (
                   <div key={attraction.attraction_id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border bg-card hover:shadow-sm transition-shadow">
@@ -236,7 +309,7 @@ export default function EntrepreneurDashboard({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-teal-600"
-                          onClick={() => { setEditingAttraction({ ...attraction }); setEditDialogOpen(true); }}
+                          onClick={() => router.push(`/dashboard/my-attractions/edit/${attraction.attraction_id}`) /* Navigate to edit page */}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -264,155 +337,93 @@ export default function EntrepreneurDashboard({
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-teal-500" />
-                {t("dashboard.createPromotion")}
+                Recent Promotions
               </CardTitle>
-              <Button variant="outline" size="sm" className="border-teal-500/30 text-teal-600 hover:bg-teal-500/10 shrink-0">
-                <Plus className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">New Promotion</span>
-              </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {[
-                { id: "p1", title: "Early Bird Special - Kuang Si Falls", discount: "30%", validUntil: "Jun 30, 2026" },
-                { id: "p2", title: "Cooking Class Bundle", discount: "20%", validUntil: "Jul 15, 2026" },
-                { id: "p3", title: "Adventure Package - Vang Vieng", discount: "40%", validUntil: "May 31, 2026" },
-              ].map((promo) => (
-                <div key={promo.id} className="p-3 sm:p-4 rounded-xl border bg-gradient-to-br from-teal-500/5 to-emerald-500/5 hover:from-teal-500/10 hover:to-emerald-500/10 transition-colors">
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white border-0 text-[10px] sm:text-xs">
-                      {promo.discount} OFF
-                    </Badge>
-                    <span className="text-[10px] sm:text-xs text-muted-foreground">until {promo.validUntil}</span>
-                  </div>
-                  <p className="text-xs sm:text-sm font-medium">{promo.title}</p>
+            {loadingPromos ? (
+              <div className="flex items-center gap-2 py-10 justify-center text-sm text-muted-foreground">
+                <RefreshCw className="w-5 h-5 animate-spin text-teal-500" /> Loading...
+              </div>
+            ) : promoError ? (
+              <div className="flex flex-col items-center py-10 gap-3 text-center">
+                <AlertCircle className="w-8 h-8 text-red-400" />
+                <p className="text-sm text-muted-foreground">{promoError}</p>
+              </div>
+            ) : recentPromotions.length === 0 ? (
+              <div className="flex flex-col items-center py-14 gap-4 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-teal-500/10 flex items-center justify-center">
+                  <BarChart3 className="w-7 h-7 text-teal-500/60" />
                 </div>
-              ))}
-            </div>
+                <p className="text-sm text-muted-foreground">No promotions found.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {recentPromotions.map((promo) => {
+                  const status = statusOf(promo);
+                  const imgUrl = resolveImage(promo.attraction_thumbnail);
+                  return (
+                    <div
+                      key={promo.promotion_id}
+                      className="p-3 sm:p-4 rounded-xl border bg-card hover:shadow-sm transition-shadow"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <Badge className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white border-0 text-[10px] sm:text-xs flex items-center gap-1">
+                          {promo.type === "percentage"
+                            ? <Percent className="w-3 h-3" />
+                            : <DollarSign className="w-3 h-3" />}
+                          {promo.type === "percentage"
+                            ? `${promo.price}% OFF`
+                            : `$${promo.price} OFF`}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={`${statusColors[status]} text-[10px]`}
+                        >
+                          {status}
+                        </Badge>
+                      </div>
+
+                      <p className="text-xs sm:text-sm font-medium mb-1 truncate">{promo.title}</p>
+
+                      {promo.attraction_name && (
+                        <div className="flex items-center gap-1.5 mb-1">
+                          {imgUrl ? (
+                            <img
+                              src={imgUrl}
+                              alt=""
+                              className="w-4 h-4 rounded object-cover"
+                            />
+                          ) : (
+                            <Building2 className="w-3 h-3 text-teal-500" />
+                          )}
+                          <span className="text-[10px] sm:text-xs text-teal-600 truncate">
+                            {promo.attraction_name}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground mt-2 pt-2 border-t">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(promo.d_end)}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Tag className="w-3 h-3" />
+                          {promo.uses_count || 0} uses
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Edit Attraction Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Edit className="w-5 h-5 text-teal-500" />
-              {t("dashboard.editAttraction")}
-            </DialogTitle>
-          </DialogHeader>
-          {editingAttraction && (
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name-en" className="text-sm">Name (English)</Label>
-                <Input
-                  id="edit-name-en"
-                  value={editingAttraction.name_en}
-                  onChange={(e) => setEditingAttraction((prev) => prev ? { ...prev, name_en: e.target.value } : prev)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-name-la" className="text-sm">Name (Lao)</Label>
-                <Input
-                  id="edit-name-la"
-                  value={editingAttraction.name_la}
-                  onChange={(e) => setEditingAttraction((prev) => prev ? { ...prev, name_la: e.target.value } : prev)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-desc" className="text-sm">Description</Label>
-                <Textarea
-                  id="edit-desc"
-                  value={editingAttraction.description}
-                  onChange={(e) => setEditingAttraction((prev) => prev ? { ...prev, description: e.target.value } : prev)}
-                  className="min-h-[80px]"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm">Type</Label>
-                  <Select
-                    value={editingAttraction.type_name ?? ""}
-                    onValueChange={(val) => setEditingAttraction((prev) => prev ? { ...prev, type_name: val } : prev)}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="temple">Temples</SelectItem>
-                      <SelectItem value="nature">Nature</SelectItem>
-                      <SelectItem value="adventure">Adventure</SelectItem>
-                      <SelectItem value="culture">Culture</SelectItem>
-                      <SelectItem value="food">Food & Dining</SelectItem>
-                      <SelectItem value="beach">Beaches</SelectItem>
-                      <SelectItem value="historical">Historical</SelectItem>
-                      <SelectItem value="nightlife">Nightlife</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-fee" className="text-sm">Entry Fee Foreigner (LAK)</Label>
-                  <Input
-                    id="edit-fee"
-                    type="number"
-                    value={editingAttraction.entry_fee_foreigner}
-                    onChange={(e) => setEditingAttraction((prev) => prev ? { ...prev, entry_fee_foreigner: Number(e.target.value) } : prev)}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-province" className="text-sm">Province</Label>
-                  <Input
-                    id="edit-province"
-                    value={editingAttraction.province}
-                    onChange={(e) => setEditingAttraction((prev) => prev ? { ...prev, province: e.target.value } : prev)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-district" className="text-sm">District</Label>
-                  <Input
-                    id="edit-district"
-                    value={editingAttraction.district}
-                    onChange={(e) => setEditingAttraction((prev) => prev ? { ...prev, district: e.target.value } : prev)}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-open" className="text-sm">Open Time</Label>
-                  <Input
-                    id="edit-open"
-                    type="time"
-                    value={editingAttraction.open_time}
-                    onChange={(e) => setEditingAttraction((prev) => prev ? { ...prev, open_time: e.target.value } : prev)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-close" className="text-sm">Close Time</Label>
-                  <Input
-                    id="edit-close"
-                    type="time"
-                    value={editingAttraction.close_time}
-                    onChange={(e) => setEditingAttraction((prev) => prev ? { ...prev, close_time: e.target.value } : prev)}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="w-full sm:w-auto">
-              {t("common.cancel")}
-            </Button>
-            <Button
-              className="w-full sm:w-auto bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
-              onClick={handleEditSave}
-            >
-              {t("common.save")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </motion.div>
   );
 }
