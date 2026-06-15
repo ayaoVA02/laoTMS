@@ -1,9 +1,21 @@
 
 
+import { createBrowserClient } from '@supabase/ssr'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-import { createBrowserClient } from '@supabase/ssr'
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase Environment Variables')
+}
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true, // บังคับให้จำ Session ไว้ใน Storage (สำคัญสำหรับ Production)
+    autoRefreshToken: true, // ให้ต่ออายุ Access Token อัตโนมัติเมื่อหมดอายุ
+    detectSessionInUrl: true // จำเป็นสำหรับการทำ Google Login (OAuth)
+  }
+},
+
+);
 
 export type Database = {
   public: {

@@ -23,15 +23,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
-const navLinks = [
-  { href: "/", labelKey: "nav.home" },
-  { href: "/attractions", labelKey: "nav.attractions" },
-  { href: "/travel-plans", labelKey: "nav.travelPlans" },
-  { href: "/favorites", labelKey: "nav.favorites" },
-  { href: "/map", labelKey: "nav.map" },
-  { href: "/dashboard", labelKey: "nav.dashboard" },
-];
+import { logoLaoTMS } from "@/assets";
+
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -48,6 +43,15 @@ export default function Navbar() {
   const { language, setLanguage } = useAppStore();
   const { unreadCount } = useNotificationStore();
   const router = useRouter();
+
+  const navLinks = [
+    { href: "/", labelKey: "nav.home" },
+    { href: "/attractions", labelKey: "nav.attractions" },
+    { href: "/travel-plans", labelKey: "nav.travelPlans" },
+    { href: "/favorites", labelKey: "nav.favorites" },
+    { href: "/map", labelKey: "nav.map" },
+    ...(isAuthenticated ? [{ href: "/dashboard", labelKey: "nav.dashboard" }] : []),
+  ];
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -93,11 +97,17 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-14 sm:h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-              <Globe className="w-5 h-5 text-white" />
+            <div className="relative w-20 h-20 ">
+              <Image
+                src={logoLaoTMS}
+                alt="LaoTMS Logo"
+                fill
+                className="object-cover p-1  "
+                priority
+              />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-teal-500 to-emerald-500 bg-clip-text text-transparent">
-              LaoTMS
+              Laos
             </span>
           </Link>
 
@@ -161,8 +171,8 @@ export default function Navbar() {
                     <button
                       onClick={() => handleLanguageToggle("en")}
                       className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${language === "en"
-                          ? "text-teal-500 font-medium"
-                          : "text-muted-foreground"
+                        ? "text-teal-500 font-medium"
+                        : "text-muted-foreground"
                         }`}
                     >
                       <span className="text-base">GB</span>
@@ -171,8 +181,8 @@ export default function Navbar() {
                     <button
                       onClick={() => handleLanguageToggle("la")}
                       className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${language === "la"
-                          ? "text-teal-500 font-medium"
-                          : "text-muted-foreground"
+                        ? "text-teal-500 font-medium"
+                        : "text-muted-foreground"
                         }`}
                     >
                       <span className="text-base">LA</span>
@@ -278,14 +288,19 @@ export default function Navbar() {
                           <User className="w-4 h-4" />
                           {t("nav.profile")}
                         </Link>
-                        <Link
-                          href="/dashboard"
-                          onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-teal-500/10 hover:text-teal-500"
-                        >
-                          <LayoutDashboard className="w-4 h-4" />
-                          {t("nav.dashboard")}
-                        </Link>
+
+                        {isAuthenticated && (
+
+                          <Link
+                            href="/dashboard"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-teal-500/10 hover:text-teal-500"
+                          >
+                            <LayoutDashboard className="w-4 h-4" />
+                            {t("nav.dashboard")}
+                          </Link>
+
+                        )}
                       </div>
                       <div className="border-t border-border/50 py-1">
                         <button
@@ -306,19 +321,19 @@ export default function Navbar() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-muted-foreground hover:text-teal-500"
+                    className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:from-teal-600 hover:to-emerald-600 shadow-md shadow-teal-500/20"
                   >
-                    {t("nav.login")}
+                    {/* {t("nav.login")} */} Account
                   </Button>
                 </Link>
-                <Link href="/auth/register">
+                {/* <Link href="/auth/register">
                   <Button
                     size="sm"
                     className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:from-teal-600 hover:to-emerald-600 shadow-md shadow-teal-500/20"
                   >
                     {t("nav.register")}
                   </Button>
-                </Link>
+                </Link> */}
               </div>
             )}
 
@@ -364,8 +379,8 @@ export default function Navbar() {
                     <Link
                       href={link.href}
                       className={`flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
-                          ? "bg-teal-500/10 text-teal-500"
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        ? "bg-teal-500/10 text-teal-500"
+                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                         }`}
                     >
                       {t(link.labelKey)}
@@ -382,16 +397,16 @@ export default function Navbar() {
                 <Link href="/auth/login" className="block">
                   <Button
                     variant="outline"
-                    className="w-full border-teal-500/30 text-teal-500 hover:bg-teal-500/10"
+                    className="w-full bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:from-teal-600 hover:to-emerald-600 shadow-md shadow-teal-500/20"
                   >
-                    {t("nav.login")}
+                    {/* {t("nav.login")} */} Account
                   </Button>
                 </Link>
-                <Link href="/auth/register" className="block">
+                {/* <Link href="/auth/register" className="block">
                   <Button className="w-full bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:from-teal-600 hover:to-emerald-600 shadow-md shadow-teal-500/20">
                     {t("nav.register")}
                   </Button>
-                </Link>
+                </Link> */}
               </motion.div>
             </div>
           </motion.div>

@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Footer from "@/components/layout/footer";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import LoginRequired from "@/components/shared/login-required";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -27,6 +29,7 @@ export default function FavoritesPage() {
   const { user, isAuthenticated } = useAuthStore();
   const { favorites = [], attractions = [], toggleFavorite, fetchFavorites } = useAttractionStore();
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -36,35 +39,18 @@ export default function FavoritesPage() {
     if (isAuthenticated && user) {
       fetchFavorites(user.id);
     }
+    // if(!isAuthenticated) router.push('/auth/login')
   }, [isAuthenticated, user, fetchFavorites]);
 
   if (!mounted) return null;
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center max-w-md"
-        >
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-white" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Login Required</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Sign in to view and manage your saved favorites across Laos.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Button asChild className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white">
-              <a href="/auth/login">Sign In</a>
-            </Button>
-            <Button asChild variant="outline" className="border-teal-500/30 text-teal-600 hover:bg-teal-500/10">
-              <a href="/auth/register">Create Account</a>
-            </Button>
-          </div>
-        </motion.div>
-      </div>
+      <LoginRequired
+        title="Sign in to view favorites"
+        description="Save and revisit your favorite attractions across Laos."
+        redirectTo="/favorites"
+      />
     );
   }
 

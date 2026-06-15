@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building2, Bell, Menu, User, ShieldCheck, Users, Briefcase, Eye } from "lucide-react";
+import { User, ShieldCheck, Users, Briefcase, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuthStore, type User as AuthUser } from "@/stores/auth-store";
 import { useTravelPlanStore } from "@/stores/travel-plan-store";
 import { useAttractionStore } from "@/stores/attraction-store";
-import { attractions, type Attraction } from "@/data/attractions";
+import { type Attraction } from "@/data/attractions";
 import Sidebar from "@/components/layout/sidebar";
-import { useAppStore } from "@/stores/app-store";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 
@@ -17,14 +16,15 @@ import AdminDashboard from "./admin-dashboard/page";
 import StaffDashboard from "./staff-dashboard/page";
 import EntrepreneurDashboard from "./entrepreneur-dashboard/page";
 import TouristDashboard from "./tourist-dashboard/page";
+import LoginRequired from "@/components/shared/login-required";
 
 type ViewMode = "ROLE" | "TOURIST";
 
 const roleLabel: Record<string, { label: string; icon: React.ElementType }> = {
-  ADMIN:        { label: "Admin Dashboard",        icon: ShieldCheck },
-  STAFF:        { label: "Staff Dashboard",         icon: Users },
-  ENTREPRENEUR: { label: "Entrepreneur Dashboard",  icon: Briefcase },
-  TOURIST:      { label: "Traveler Dashboard",      icon: User },
+  ADMIN: { label: "Admin Dashboard", icon: ShieldCheck },
+  STAFF: { label: "Staff Dashboard", icon: Users },
+  ENTREPRENEUR: { label: "Entrepreneur Dashboard", icon: Briefcase },
+  TOURIST: { label: "Traveler Dashboard", icon: User },
 };
 
 /** Roles that can switch to preview the Tourist view */
@@ -33,28 +33,20 @@ const CAN_SWITCH = ["ADMIN", "STAFF", "ENTREPRENEUR"];
 export default function DashboardPage() {
   const { t } = useTranslation();
   const { user, isAuthenticated } = useAuthStore();
-  const { setSidebarOpen } = useAppStore();
   const { favorites = [] } = useAttractionStore();
   const { plans = [] } = useTravelPlanStore();
   const role = user?.role || "TOURIST";
-
   // Default to "ROLE", update from localStorage on mount
   const [viewMode, setViewMode] = useState<ViewMode>("ROLE");
 
-  const [localAttractions, setLocalAttractions] = useState<Attraction[]>(attractions || []);
-  const [socialShareStates, setSocialShareStates] = useState<Record<string, boolean>>(() =>
-    attractions.reduce(
-      (acc, a) => ({ ...acc, [a.attraction_id]: a.social_share }),
-      {} as Record<string, boolean>,
-    ),
-  );
+  const [localAttractions, setLocalAttractions] = useState<Attraction[]>([]);
+  const [socialShareStates, setSocialShareStates] = useState<Record<string, boolean>>({});
   const [myReviews, setMyReviews] = useState<
     { id: string; attractionName: string; rating: number; content: string; createdAt: string }[]
   >([]);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
-  const pendingAttractions = localAttractions.filter((a) => a.status === "pending");
-  const myAttractions = localAttractions.filter(() => role === "ENTREPRENEUR");
+  const myAttractions = role === "ENTREPRENEUR" ? localAttractions : [];
 
   // Load the saved mode on mount
   useEffect(() => {
@@ -73,6 +65,36 @@ export default function DashboardPage() {
       localStorage.setItem(`laotms_view_mode_${user.id}`, mode);
     }
   };
+
+  // Fetch Real Attraction Data from Supabase
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+
+    const fetchAttractions = async () => {
+      let query = supabase.from("attractions").select("*");
+
+      // Filter by user_id if entrepreneur
+      if (role === "ENTREPRENEUR") {
+        query = query.eq("user_id", user.id);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching attractions:", error);
+      } else if (data) {
+        setLocalAttractions(data as Attraction[]);
+        // Initialize social share states
+        const states = data.reduce(
+          (acc, a) => ({ ...acc, [a.attraction_id]: a.social_share }),
+          {} as Record<string, boolean>,
+        );
+        setSocialShareStates(states);
+      }
+    };
+
+    fetchAttractions();
+  }, [isAuthenticated, user?.id, role]);
 
   useEffect(() => {
     if (!isAuthenticated || !user?.id) { setMyReviews([]); return; }
@@ -112,42 +134,66 @@ export default function DashboardPage() {
     fetchMyReviews();
   }, [isAuthenticated, user?.id]);
 
-  const handleApprove = (id: string) =>
-    setLocalAttractions((prev) => prev.map((a) => a.attraction_id === id ? { ...a, status: "approved" as const } : a));
+  const handleApprove = async (id: string) => {
+    const { error } = await supabase.from("attractions").update({ status: "approved" }).eq("attraction_id", id);
+    if (!error) {
+      setLocalAttractions((prev) => prev.map((a) => a.attraction_id === id ? { ...a, status: "approved" } : a));
+    }
+  };
 
-  const handleReject = (id: string) =>
-    setLocalAttractions((prev) => prev.map((a) => a.attraction_id === id ? { ...a, status: "rejected" as const } : a));
+  const handleReject = async (id: string) => {
+    const { error } = await supabase.from("attractions").update({ status: "rejected" }).eq("attraction_id", id);
+    if (!error) {
+      setLocalAttractions((prev) => prev.map((a) => a.attraction_id === id ? { ...a, status: "rejected" } : a));
+    }
+  };
 
-  const handleDeleteAttraction = (id: string) =>
-    setLocalAttractions((prev) => prev.filter((a) => a.attraction_id !== id));
+  const handleDeleteAttraction = async (id: string) => {
+    const { error } = await supabase.from("attractions").delete().eq("attraction_id", id);
+    if (!error) {
+      setLocalAttractions((prev) => prev.filter((a) => a.attraction_id !== id));
+    }
+  };
 
-  const handleEditAttraction = (updated: Attraction) =>
-    setLocalAttractions((prev) => prev.map((a) => a.attraction_id === updated.attraction_id ? updated : a));
+  const handleEditAttraction = async (updated: Attraction) => {
+    const { error } = await supabase
+      .from("attractions")
+      .update(updated)
+      .eq("attraction_id", updated.attraction_id);
 
-  const handleToggleSocialShare = (id: string) =>
-    setSocialShareStates((prev) => ({ ...prev, [id]: !prev[id] }));
+    if (!error) {
+      setLocalAttractions((prev) => prev.map((a) => a.attraction_id === updated.attraction_id ? updated : a));
+    }
+  };
 
-  if (!isAuthenticated) {
+  const handleToggleSocialShare = async (id: string) => {
+    const newState = !socialShareStates[id];
+    const { error } = await supabase
+      .from("attractions")
+      .update({ social_share: newState })
+      .eq("attraction_id", id);
+
+    if (!error) {
+      setSocialShareStates((prev) => ({ ...prev, [id]: newState }));
+    }
+  };
+
+
+  // useEffect(() => {
+  //   if (isAuthReady && !isAuthenticated) {
+  //     router.push("/auth/login");
+  //   }
+  // }, [isAuthReady, isAuthenticated]);
+  if ( !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/20 flex items-center justify-center p-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-md">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-            <Building2 className="w-8 h-8 text-white" />
-          </div>
-          <h2 className="text-xl sm:text-2xl font-bold mb-2">Welcome to LaoTMS Dashboard</h2>
-          <p className="text-sm text-muted-foreground mb-6">Sign in to access your personalized dashboard.</p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button asChild className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white">
-              <a href="/auth/login">Sign In</a>
-            </Button>
-            <Button asChild variant="outline" className="border-teal-500/30 text-teal-600 hover:bg-teal-500/10">
-              <a href="/auth/register">Create Account</a>
-            </Button>
-          </div>
-        </motion.div>
-      </div>
-    );
+      <LoginRequired
+        title="Dashboard access required"
+        description="Sign in to manage your attractions and view analytics."
+        redirectTo="/dashboard"
+      />
+    )
   }
+
 
   const canSwitch = CAN_SWITCH.includes(role);
   const activeView = canSwitch ? viewMode : "ROLE";
@@ -190,6 +236,7 @@ export default function DashboardPage() {
     }
   };
 
+
   const RoleIcon = roleLabel[role]?.icon ?? User;
 
   return (
@@ -222,11 +269,10 @@ export default function DashboardPage() {
                       variant={activeView === "ROLE" ? "default" : "ghost"}
                       size="sm"
                       onClick={() => handleViewModeChange("ROLE")}
-                      className={`text-xs gap-1.5 px-3 py-1.5 rounded-lg h-8 font-medium transition-all ${
-                        activeView === "ROLE" 
-                          ? "bg-white dark:bg-slate-800 shadow-sm text-foreground hover:bg-white dark:hover:bg-slate-800" 
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
+                      className={`text-xs gap-1.5 px-3 py-1.5 rounded-lg h-8 font-medium transition-all ${activeView === "ROLE"
+                        ? "bg-white dark:bg-slate-800 shadow-sm text-foreground hover:bg-white dark:hover:bg-slate-800"
+                        : "text-muted-foreground hover:text-foreground"
+                        }`}
                     >
                       <RoleIcon className="w-3.5 h-3.5 shrink-0" />
                       <span className="hidden md:inline">Management</span>
@@ -235,11 +281,10 @@ export default function DashboardPage() {
                       variant={activeView === "TOURIST" ? "default" : "ghost"}
                       size="sm"
                       onClick={() => handleViewModeChange("TOURIST")}
-                      className={`text-xs gap-1.5 px-3 py-1.5 rounded-lg h-8 font-medium transition-all ${
-                        activeView === "TOURIST" 
-                          ? "bg-teal-500 text-white shadow-sm hover:bg-teal-600" 
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
+                      className={`text-xs gap-1.5 px-3 py-1.5 rounded-lg h-8 font-medium transition-all ${activeView === "TOURIST"
+                        ? "bg-teal-500 text-white shadow-sm hover:bg-teal-600"
+                        : "text-muted-foreground hover:text-foreground"
+                        }`}
                     >
                       <Eye className="w-3.5 h-3.5 shrink-0" />
                       <span>Traveler View</span>
@@ -247,7 +292,7 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
+                {/* <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="icon"
@@ -264,7 +309,7 @@ export default function DashboardPage() {
                       </span>
                     )}
                   </Button>
-                </div>
+                </div> */}
               </div>
             </div>
           </motion.div>

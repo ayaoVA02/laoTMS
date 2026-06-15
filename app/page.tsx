@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import AttractionCard from "@/components/shared/attraction-card";
-import { useAttractionStore } from "@/stores/attraction-store";
+import { useAttractionStore  } from "@/stores/attraction-store";
 import Link from "next/link";
 import HeroSearchBar from "@/components/shared/hero-search-bar";
 import Image from "next/image";
@@ -27,9 +27,11 @@ import provincesData from "@/laos_provinces_districts.json";
 
 export default function Home() {
   const { t } = useTranslation();
-  const { attractions = [], types = [] } = useAttractionStore();
+  const { attractions = [], types=[] } = useAttractionStore();
+ 
   const promotions: { id: string; title: string; description: string; image: string; discount: number; validUntil: string; attractionId: string }[] = [];
 
+  console.log("HomePage types:", types); // Debug: log attractions data
   const featuredAttractions = useMemo(() =>
     attractions.filter((a) => a.featured).slice(0, 6)
     , [attractions]);
@@ -41,14 +43,7 @@ export default function Home() {
     const provinces = provincesData[0].provinces;
     const counts: Record<string, number> = {};
 
-    // Map of specific images for provinces to make them look distinct
-    const provinceImages: Record<string, string> = {
-      "Vientiane Prefecture": "https://images.pexels.com/photos/2166553/pexels-photo-2166553.jpeg?auto=compress&cs=tinysrgb&w=800",
-      "Luang Prabang Province": "https://images.pexels.com/photos/5726825/pexels-photo-5726825.jpeg?auto=compress&cs=tinysrgb&w=800",
-      "Vientiane Province": "https://images.pexels.com/photos/2406979/pexels-photo-2406979.jpeg?auto=compress&cs=tinysrgb&w=800",
-      "Champasak Province": "https://images.pexels.com/photos/2406981/pexels-photo-2406981.jpeg?auto=compress&cs=tinysrgb&w=800",
-      "Savannakhet Province": "https://images.pexels.com/photos/1239162/pexels-photo-1239162.jpeg?auto=compress&cs=tinysrgb&w=800",
-    };
+   
 
     attractions.forEach(attr => {
       const p = provinces.find(prov =>
@@ -65,7 +60,7 @@ export default function Home() {
         name: fullName.replace(' Province', '').replace(' Prefecture', ''),
         fullName,
         count,
-        image: provinceImages[fullName] || "https://images.pexels.com/photos/2166553/pexels-photo-2166553.jpeg?auto=compress&cs=tinysrgb&w=800"
+        image: "https://images.pexels.com/photos/2166553/pexels-photo-2166553.jpeg?auto=compress&cs=tinysrgb&w=800"
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 4);

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, User, ChevronDown } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next"; // Removed ChevronDown from import
 import { useAuthStore } from "@/stores/auth-store";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,6 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 
@@ -43,51 +36,56 @@ const staggerContainer = {
 export default function RegisterPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { register } = useAuthStore();
+  const { register , user } = useAuthStore();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<string>("");
+  // Removed role state
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) return;
+    if (password !== confirmPassword) {
+      setError(t("auth.passwordMismatch", "Passwords do not match"));
+      return;
+    }
     setIsLoading(true);
+    setError(null); // Clear previous errors
     const nameParts = fullName.trim().split(" ");
     const firstName = nameParts[0] || "";
     const lastName = nameParts.slice(1).join(" ") || "";
-    const userRole = (role === "ENTREPRENEUR" ? "ENTREPRENEUR" : "TOURIST") as "ENTREPRENEUR" | "TOURIST";
-    const result = await register(email, password, userRole, firstName, lastName);
+    
+    // Default role to TOURIST. Onboarding allows changing this if needed.
+    const result = await register(email, password, 'TOURIST', firstName, lastName);
+    
     if (result.success) {
-
-      toast.success(t("auth.registrationSuccess", "Registration successful! Please check your email to verify your account."));
-      // router.push("/auth/login");
-      router.push('/onboarding');
+      toast.success(t("auth.registrationSuccessCheckEmail", `Registration successful! Please check your email (${email}) to verify your account.`));
+      router.push("/onboarding");
     }
     setIsLoading(false);
-
-
-    if (result.success === false) {
-      setError("Something went wrong. Please try again.");
+    
+    if (!result.success) {
+      setError(result.error || "Something went wrong. Please try again.");
     }
   };
 
+  const onboardingCompleted = user?.user_metadata?.onboarding_completed === true
   const handleGoogleLogin = async () => {
-    /* placeholder for OAuth */
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`
+        /** 
+         * Redirect to /dashboard. 
+         * The Middleware (middleware.ts) will automatically detect if the user 
+         * is new and redirect them to /onboarding if they haven't finished setup.
+         */
+        redirectTo: ` ${window.location.origin}/dashboard`
       }
     })
-
-    console.log("Google login data:", data, "error:", error);
   };
 
   return (
@@ -243,6 +241,7 @@ export default function RegisterPage() {
                         placeholder="Enter your full name"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
+                        disabled={isLoading}
                         className="pl-10 h-11 border-slate-200 dark:border-slate-700 focus:border-teal-500 focus:ring-teal-500"
                       />
                     </div>
@@ -260,6 +259,7 @@ export default function RegisterPage() {
                         placeholder="name@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        disabled={isLoading}
                         className="pl-10 h-11 border-slate-200 dark:border-slate-700 focus:border-teal-500 focus:ring-teal-500"
                       />
                     </div>
@@ -282,6 +282,7 @@ export default function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
+                        disabled={isLoading}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                       >
                         {showPassword ? (
@@ -310,6 +311,7 @@ export default function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        disabled={isLoading}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                       >
                         {showConfirmPassword ? (
@@ -326,32 +328,7 @@ export default function RegisterPage() {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-slate-700 dark:text-slate-300">
-                      {t("auth.role", "Role")}
-                    </Label>
-                    <Select value={role} onValueChange={setRole}>
-                      <SelectTrigger className="h-11 border-slate-200 dark:border-slate-700 focus:border-teal-500 focus:ring-teal-500">
-                        <SelectValue
-                          placeholder={t("auth.selectRole", "Select your role")}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="TOURIST">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-teal-500" />
-                            {t("auth.tourist", "Tourist")}
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="ENTREPRENEUR">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                            {t("auth.entrepreneur", "Entrepreneur")}
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Removed role selection */}
                   <div>
                     <p className="text-red-500 text-sm">{error}</p>
                   </div>
@@ -359,7 +336,7 @@ export default function RegisterPage() {
                   <Button
                     type="submit"
                     className="w-full h-11 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg shadow-teal-500/25"
-                    disabled={isLoading || !fullName || !email || !password || !confirmPassword || !role || password !== confirmPassword}
+                    disabled={isLoading || !fullName || !email || !password || !confirmPassword || password !== confirmPassword}
                   >
                     {isLoading
                       ? t("auth.creatingAccount", "Creating account...")
