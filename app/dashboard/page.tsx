@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Building2, Menu, User, ShieldCheck, Users, Briefcase, Eye } from "lucide-react";
 import { User, ShieldCheck, Users, Briefcase, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore, type User as AuthUser } from "@/stores/auth-store";
@@ -9,6 +10,7 @@ import { useTravelPlanStore } from "@/stores/travel-plan-store";
 import { useAttractionStore } from "@/stores/attraction-store";
 import { type Attraction } from "@/data/attractions";
 import Sidebar from "@/components/layout/sidebar";
+import { useAppStore, type ViewMode } from "@/stores/app-store";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 
@@ -18,49 +20,63 @@ import EntrepreneurDashboard from "./entrepreneur-dashboard/page";
 import TouristDashboard from "./tourist-dashboard/page";
 import LoginRequired from "@/components/shared/login-required";
 
-type ViewMode = "ROLE" | "TOURIST";
+interface ReviewItem {
+  id: string;
+  attractionName: string;
+  rating: number;
+  content: string;
+  createdAt: string;
+}
 
 const roleLabel: Record<string, { label: string; icon: React.ElementType }> = {
-  ADMIN: { label: "Admin Dashboard", icon: ShieldCheck },
-  STAFF: { label: "Staff Dashboard", icon: Users },
-  ENTREPRENEUR: { label: "Entrepreneur Dashboard", icon: Briefcase },
-  TOURIST: { label: "Traveler Dashboard", icon: User },
+  ADMIN:        { label: "Admin Dashboard",        icon: ShieldCheck },
+  STAFF:        { label: "Staff Dashboard",         icon: Users      },
+  ENTREPRENEUR: { label: "Entrepreneur Dashboard",  icon: Briefcase  },
+  TOURIST:      { label: "Traveler Dashboard",      icon: User       },
 };
 
-/** Roles that can switch to preview the Tourist view */
 const CAN_SWITCH = ["ADMIN", "STAFF", "ENTREPRENEUR"];
 
 export default function DashboardPage() {
   const { t } = useTranslation();
   const { user, isAuthenticated } = useAuthStore();
+  const { setSidebarOpen, viewMode, setViewMode, touristTab, setTouristTab } = useAppStore();
   const { favorites = [] } = useAttractionStore();
   const { plans = [] } = useTravelPlanStore();
   const role = user?.role || "TOURIST";
-  // Default to "ROLE", update from localStorage on mount
-  const [viewMode, setViewMode] = useState<ViewMode>("ROLE");
 
-  const [localAttractions, setLocalAttractions] = useState<Attraction[]>([]);
-  const [socialShareStates, setSocialShareStates] = useState<Record<string, boolean>>({});
-  const [myReviews, setMyReviews] = useState<
-    { id: string; attractionName: string; rating: number; content: string; createdAt: string }[]
-  >([]);
-  const [reviewsLoading, setReviewsLoading] = useState(true);
+  // Local viewMode state — kept in sync with the store
+  const [localViewMode, setLocalViewMode] = useState<ViewMode>("ROLE");
 
-  const myAttractions = role === "ENTREPRENEUR" ? localAttractions : [];
+  const [localAttractions, setLocalAttractions] = useState<Attraction[]>(attractions || []);
+  const [socialShareStates, setSocialShareStates] = useState<Record<string, boolean>>(() =>
+    (attractions || []).reduce(
+      (acc, a) => ({ ...acc, [a.attraction_id]: !!a.social_share }),
+      {} as Record<string, boolean>,
+    ),
+  );
+  
+  // Fixed state initialization syntax error here
+  const [myReviews, setMyReviews] = useState<ReviewItem[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
-  // Load the saved mode on mount
+  // Load saved mode from localStorage on mount, sync to store
   useEffect(() => {
     if (typeof window !== "undefined" && user?.id) {
       const savedMode = localStorage.getItem(`laotms_view_mode_${user.id}`);
       if (savedMode === "ROLE" || savedMode === "TOURIST") {
+        setLocalViewMode(savedMode);
         setViewMode(savedMode);
       }
     }
-  }, [user?.id]);
+  }, [user?.id, setViewMode]);
 
-  // Handle changing the mode and saving it to storage
   const handleViewModeChange = (mode: ViewMode) => {
-    setViewMode(mode);
+    setLocalViewMode(mode);
+    setViewMode(mode); // sync to store so sidebar reads it
+    if (mode === "TOURIST") {
+      setTouristTab("overview"); // reset tab when switching to tourist view
+    }
     if (typeof window !== "undefined" && user?.id) {
       localStorage.setItem(`laotms_view_mode_${user.id}`, mode);
     }
@@ -97,7 +113,10 @@ export default function DashboardPage() {
   }, [isAuthenticated, user?.id, role]);
 
   useEffect(() => {
-    if (!isAuthenticated || !user?.id) { setMyReviews([]); return; }
+    if (!isAuthenticated || !user?.id) { 
+      setMyReviews([]); 
+      return; 
+    }
 
     const fetchMyReviews = async () => {
       setReviewsLoading(true);
@@ -107,14 +126,22 @@ export default function DashboardPage() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (error) { console.error("Failed to fetch reviews:", error); setMyReviews([]); setReviewsLoading(false); return; }
+      if (error) {
+        console.error("Failed to fetch reviews:", error);
+        setMyReviews([]);
+        setReviewsLoading(false);
+        return;
+      }
 
       const attractionIds = Array.from(new Set((reviewRows || []).map((r) => r.attraction_id)));
       const attractionNames: Record<string, string> = {};
 
       if (attractionIds.length > 0) {
         const { data: attractionRows, error: aErr } = await supabase
-          .from("attractions").select("attraction_id, name_en").in("attraction_id", attractionIds);
+          .from("attractions")
+          .select("attraction_id, name_en")
+          .in("attraction_id", attractionIds);
+          
         if (aErr) console.error("Failed to fetch attraction names:", aErr);
         (attractionRows || []).forEach((a) => { attractionNames[a.attraction_id] = a.name_en; });
       }
@@ -134,37 +161,13 @@ export default function DashboardPage() {
     fetchMyReviews();
   }, [isAuthenticated, user?.id]);
 
-  const handleApprove = async (id: string) => {
-    const { error } = await supabase.from("attractions").update({ status: "approved" }).eq("attraction_id", id);
-    if (!error) {
-      setLocalAttractions((prev) => prev.map((a) => a.attraction_id === id ? { ...a, status: "approved" } : a));
-    }
-  };
+  const handleDeleteAttraction = (id: string) =>
+    setLocalAttractions((prev) => prev.filter((a) => a.attraction_id !== id));
 
-  const handleReject = async (id: string) => {
-    const { error } = await supabase.from("attractions").update({ status: "rejected" }).eq("attraction_id", id);
-    if (!error) {
-      setLocalAttractions((prev) => prev.map((a) => a.attraction_id === id ? { ...a, status: "rejected" } : a));
-    }
-  };
-
-  const handleDeleteAttraction = async (id: string) => {
-    const { error } = await supabase.from("attractions").delete().eq("attraction_id", id);
-    if (!error) {
-      setLocalAttractions((prev) => prev.filter((a) => a.attraction_id !== id));
-    }
-  };
-
-  const handleEditAttraction = async (updated: Attraction) => {
-    const { error } = await supabase
-      .from("attractions")
-      .update(updated)
-      .eq("attraction_id", updated.attraction_id);
-
-    if (!error) {
-      setLocalAttractions((prev) => prev.map((a) => a.attraction_id === updated.attraction_id ? updated : a));
-    }
-  };
+  const handleEditAttraction = (updated: Attraction) =>
+    setLocalAttractions((prev) =>
+      prev.map((a) => a.attraction_id === updated.attraction_id ? updated : a)
+    );
 
   const handleToggleSocialShare = async (id: string) => {
     const newState = !socialShareStates[id];
@@ -196,7 +199,8 @@ export default function DashboardPage() {
 
 
   const canSwitch = CAN_SWITCH.includes(role);
-  const activeView = canSwitch ? viewMode : "ROLE";
+  const activeView = canSwitch ? localViewMode : "ROLE";
+  const myAttractions = localAttractions.filter(() => role === "ENTREPRENEUR");
 
   const renderContent = () => {
     if (activeView === "TOURIST") {
@@ -206,6 +210,8 @@ export default function DashboardPage() {
           favoritesCount={favorites.length}
           myReviews={myReviews}
           reviewsLoading={reviewsLoading}
+          activeTab={touristTab}
+          onTabChange={setTouristTab}
         />
       );
     }
@@ -213,7 +219,7 @@ export default function DashboardPage() {
       case "ADMIN":
         return <AdminDashboard attractionsCount={localAttractions.length} />;
       case "STAFF":
-        return <StaffDashboard localAttractions={localAttractions} onApprove={handleApprove} onReject={handleReject} />;
+        return <StaffDashboard />;
       case "ENTREPRENEUR":
         return (
           <EntrepreneurDashboard
@@ -231,6 +237,8 @@ export default function DashboardPage() {
             favoritesCount={favorites.length}
             myReviews={myReviews}
             reviewsLoading={reviewsLoading}
+            activeTab={touristTab}
+            onTabChange={setTouristTab}
           />
         );
     }
@@ -241,6 +249,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/20">
+      {/* Passing activeView ensures your custom Sidebar correctly watches and re-renders navigation matching this view */}
       <Sidebar viewMode={activeView} />
 
       <div className="lg:pl-[264px] transition-all duration-300">
@@ -258,7 +267,9 @@ export default function DashboardPage() {
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5">
                   <RoleIcon className="w-3.5 h-3.5 shrink-0" />
-                  <span>Welcome back, <strong>{user?.name || "Guest"}</strong> ({roleLabel[role]?.label})</span>
+                  <span>
+                    Welcome back, <strong>{user?.name || "Guest"}</strong> ({roleLabel[role]?.label})
+                  </span>
                 </p>
               </div>
 
@@ -269,10 +280,11 @@ export default function DashboardPage() {
                       variant={activeView === "ROLE" ? "default" : "ghost"}
                       size="sm"
                       onClick={() => handleViewModeChange("ROLE")}
-                      className={`text-xs gap-1.5 px-3 py-1.5 rounded-lg h-8 font-medium transition-all ${activeView === "ROLE"
-                        ? "bg-white dark:bg-slate-800 shadow-sm text-foreground hover:bg-white dark:hover:bg-slate-800"
-                        : "text-muted-foreground hover:text-foreground"
-                        }`}
+                      className={`text-xs gap-1.5 px-3 py-1.5 rounded-lg h-8 font-medium transition-all ${
+                        activeView === "ROLE"
+                          ? "bg-white dark:bg-slate-800 shadow-sm text-foreground hover:bg-white dark:hover:bg-slate-800"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
                     >
                       <RoleIcon className="w-3.5 h-3.5 shrink-0" />
                       <span className="hidden md:inline">Management</span>
@@ -281,10 +293,11 @@ export default function DashboardPage() {
                       variant={activeView === "TOURIST" ? "default" : "ghost"}
                       size="sm"
                       onClick={() => handleViewModeChange("TOURIST")}
-                      className={`text-xs gap-1.5 px-3 py-1.5 rounded-lg h-8 font-medium transition-all ${activeView === "TOURIST"
-                        ? "bg-teal-500 text-white shadow-sm hover:bg-teal-600"
-                        : "text-muted-foreground hover:text-foreground"
-                        }`}
+                      className={`text-xs gap-1.5 px-3 py-1.5 rounded-lg h-8 font-medium transition-all ${
+                        activeView === "TOURIST"
+                          ? "bg-teal-500 text-white shadow-sm hover:bg-teal-600"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
                     >
                       <Eye className="w-3.5 h-3.5 shrink-0" />
                       <span>Traveler View</span>
@@ -301,15 +314,7 @@ export default function DashboardPage() {
                   >
                     <Menu className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" size="icon" className="relative hidden sm:flex h-9 w-9 rounded-xl">
-                    <Bell className="w-4 h-4" />
-                    {pendingAttractions.length > 0 && role !== "TOURIST" && activeView === "ROLE" && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center animate-pulse">
-                        {pendingAttractions.length}
-                      </span>
-                    )}
-                  </Button>
-                </div> */}
+                </div>
               </div>
             </div>
           </motion.div>
@@ -323,7 +328,7 @@ export default function DashboardPage() {
                 transition={{ duration: 0.2 }}
                 className="mb-4 sm:mb-6"
               >
-                <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-teal-500/8 border border-teal-500/20 text-teal-700 dark:text-teal-400 text-xs sm:text-sm">
+                <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-teal-500/5 border border-teal-500/20 text-teal-700 dark:text-teal-400 text-xs sm:text-sm">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 shrink-0" />
                     <span>You are currently simulating the traveler platform workspace experience.</span>
@@ -340,8 +345,9 @@ export default function DashboardPage() {
           </AnimatePresence>
 
           <AnimatePresence mode="wait">
+            {/* Replaced invalid <motion.key> element with correct <motion.div> layout container */}
             <motion.div
-              key={activeView}
+              key={activeView === "TOURIST" ? `tourist-${touristTab}` : activeView}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
