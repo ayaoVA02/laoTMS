@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, User, Phone, Globe, MapPin, Briefcase, ChevronRight, Loader2, Check } from 'lucide-react';
+import { Camera, User, Phone, Globe, MapPin, Briefcase, ChevronRight, Loader2, Check, AlertCircle } from 'lucide-react';
 import { useAuthStore, UserRole } from '@/stores/auth-store';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -17,22 +17,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import toast from 'react-hot-toast';
-
-const R2_UPLOAD_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_URL;
-
-// ─── Upload helper ────────────────────────────────────────────────────────────
-async function uploadToR2(file: File, userId: string): Promise<string> {
-  const ext = file.name.split('.').pop();
-  const key = `profiles/${userId}-${Date.now()}.${ext}`;
-  const res = await fetch(`${R2_UPLOAD_URL}/${key}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': file.type },
-    body: file,
-  });
-  if (!res.ok) throw new Error('Upload failed');
-  // Return the public URL — adjust if your R2 bucket has a custom domain
-  return `${R2_UPLOAD_URL}/${key}`;
-}
+import { useTranslation } from 'react-i18next';
+import provincesData from "@/laos_provinces_districts.json";
+import { uploadToR2, getR2Url } from "@/lib/upload";
 
 // ─── Gender options ───────────────────────────────────────────────────────────
 const GENDERS = [
@@ -50,14 +37,6 @@ const DEFAULT_AVATARS = [
   { id: 6, emoji: '👩‍🎓', label: 'Student F' },
   { id: 7, emoji: '🧑‍🚀', label: 'Traveler' },
   { id: 8, emoji: '👳‍♂️', label: 'Tourist' },
-];
-
-// ─── Lao provinces ───────────────────────────────────────────────────────────
-const PROVINCES = [
-  'Vientiane Capital', 'Phongsali', 'Luang Namtha', 'Oudomxay', 'Bokeo',
-  'Luang Prabang', 'Huaphanh', 'Xayabury', 'Xieng Khouang', 'Vientiane',
-  'Borikhamxay', 'Khammouane', 'Savannakhet', 'Saravane', 'Sekong',
-  'Champasack', 'Attapeu', 'Xaysomboun',
 ];
 
 // ─── Fade variants ────────────────────────────────────────────────────────────
@@ -81,13 +60,13 @@ const fadeUp = {
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function OnboardingPage() {
   const { user, initAuth } = useAuthStore();
+  const { t, i18n } = useTranslation();
+  const isLao = i18n.language === 'la';
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [sessionUser, setSessionUser] = useState<any>(null);
   const [loadingSession, setLoadingSession] = useState(true);
-
-
-
+  const [errors, setErrors] = useState<Set<string>>(new Set());
 
   // shared
   const [firstName, setFirstName] = useState(user?.name?.split(' ')[0] ?? '');
@@ -112,6 +91,10 @@ export default function OnboardingPage() {
   const [province, setProvince] = useState('');
   const [district, setDistrict] = useState('');
   const [village, setVillage] = useState('');
+
+  const [uploading, setUploading] = useState(false);
+  const provinces = provincesData[0].provinces;
+  const availableDistricts = provinces.find(p => p.province_en === province)?.districts || [];
 
   const [saving, setSaving] = useState(false);
 
@@ -141,8 +124,8 @@ export default function OnboardingPage() {
 
       console.log('User metadata:', meta.avatar_url);
       if (meta?.avatar_url) {
-        setPreviewUrl(meta.avatar_url);
-        setProfileImg(meta.avatar_url);
+        setProfileImg(getR2Url(meta.avatar_url)); // Store full URL
+        setPreviewUrl(getR2Url(meta.avatar_url)); // Display full URL
       }
       // If user already has a role, pre-select it
       if (meta?.role) {
@@ -205,27 +188,62 @@ export default function OnboardingPage() {
   }, [firstName, lastName, phone, nationality, gender, selectedRole, preferences, position, province, district, village]);
 
   // ── avatar pick ──────────────────────────────────────────────────────────────
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Create blob URL for immediate preview
     const blobUrl = URL.createObjectURL(file);
     setPreviewUrl(blobUrl);
+    setUploading(true);
 
-    // Convert to data URL for persistent storage
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      setProfileImg(dataUrl); // Save data URL for persistence
-      toast.success('Photo selected!');
-    };
-    reader.readAsDataURL(file);
+    try {
+      const key = await uploadToR2(file, 'profiles');
+      setProfileImg(getR2Url(key)); // Store full URL in state
+      setPreviewUrl(getR2Url(key));
+      toast.success('Photo uploaded!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to upload photo');
+      setPreviewUrl(profileImg ? getR2Url(profileImg) : '');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ── validation ───────────────────────────────────────────────────────────────
+  const validate = () => {
+    const newErrors = new Set<string>();
+    
+    // Common requirements
+    if (!firstName.trim()) newErrors.add('firstName');
+    if (!lastName.trim()) newErrors.add('lastName');
+    if (!nationality.trim()) newErrors.add('nationality');
+
+    if (isTourist) {
+      if (!preferences.trim()) newErrors.add('preferences');
+    }
+
+    if (isEntrepreneur) {
+      if (!phone.trim()) newErrors.add('phone');
+      if (!position.trim()) newErrors.add('position');
+      if (!province) newErrors.add('province');
+      if (!district) newErrors.add('district');
+      if (!village.trim()) newErrors.add('village');
+    }
+
+    setErrors(newErrors);
+    return newErrors.size === 0;
   };
 
   // ── save ─────────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!sessionUser) return;
+    if (!validate()) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
     const userId = sessionUser.id;
 
     setSaving(true);
@@ -345,7 +363,6 @@ export default function OnboardingPage() {
       setSaving(false);
     }
   };
-  const isValid = firstName.trim().length > 0 && lastName.trim().length > 0;
 
   // ── role badge ────────────────────────────────────────────────────────────────
   const roleBadge = isTourist
@@ -398,6 +415,11 @@ export default function OnboardingPage() {
                 ) : (
                   <User className="w-10 h-10 text-slate-500" />
                 )}
+                {uploading && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-2xl">
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => fileRef.current?.click()}
@@ -420,20 +442,25 @@ export default function OnboardingPage() {
 
             {/* Name row */}
             <div className="grid grid-cols-2 gap-4">
-              <Field label="First name" icon={<User className="w-4 h-4" />}>
+              <Field 
+                label={isEntrepreneur ? "Username (First Name)" : "First name"} 
+                icon={<User className="w-4 h-4" />} 
+                required 
+                error={errors.has('firstName') ? "Required" : undefined}
+              >
                 <Input
                   placeholder="Somchai"
                   value={firstName}
-                  onChange={e => setFirstName(e.target.value)}
-                  className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 focus:border-teal-500 h-11"
+                  onChange={e => { setFirstName(e.target.value); if(errors.has('firstName')) setErrors(prev => { const n = new Set(prev); n.delete('firstName'); return n; }); }}
+                  className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${errors.has('firstName') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
                 />
               </Field>
-              <Field label="Last name" icon={<User className="w-4 h-4" />}>
+              <Field label="Last name" icon={<User className="w-4 h-4" />} required error={errors.has('lastName') ? "Required" : undefined}>
                 <Input
                   placeholder="Vongvichit"
                   value={lastName}
-                  onChange={e => setLastName(e.target.value)}
-                  className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 focus:border-teal-500 h-11"
+                  onChange={e => { setLastName(e.target.value); if(errors.has('lastName')) setErrors(prev => { const n = new Set(prev); n.delete('lastName'); return n; }); }}
+                  className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${errors.has('lastName') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
                 />
               </Field>
             </div>
@@ -470,22 +497,22 @@ export default function OnboardingPage() {
 
             {/* Phone + Gender */}
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Phone" icon={<Phone className="w-4 h-4" />}>
+              <Field label="Phone" icon={<Phone className="w-4 h-4" />} required={isEntrepreneur} error={isEntrepreneur && errors.has('phone') ? "Required" : undefined}>
                 <Input
                   placeholder="+856 20 XXXX XXXX"
                   value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 focus:border-teal-500 h-11"
+                  onChange={e => { setPhone(e.target.value); if(errors.has('phone')) setErrors(prev => { const n = new Set(prev); n.delete('phone'); return n; }); }}
+                  className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${isEntrepreneur && errors.has('phone') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
                 />
               </Field>
               <Field label="Gender" icon={<User className="w-4 h-4" />}>
                 <Select value={gender} onValueChange={setGender}>
-                  <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white h-11 focus:border-teal-500">
+                  <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white h-11">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+                  <SelectContent className="dark:bg-slate-900">
                     {GENDERS.map(g => (
-                      <SelectItem key={g.value} value={g.value} className="text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700">
+                      <SelectItem key={g.value} value={g.value}>
                         {g.label}
                       </SelectItem>
                     ))}
@@ -495,12 +522,12 @@ export default function OnboardingPage() {
             </div>
 
             {/* Nationality */}
-            <Field label="Nationality" icon={<Globe className="w-4 h-4" />}>
+            <Field label="Nationality" icon={<Globe className="w-4 h-4" />} required error={errors.has('nationality') ? "Required" : undefined}>
               <Input
                 placeholder="Lao"
                 value={nationality}
-                onChange={e => setNationality(e.target.value)}
-                className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 focus:border-teal-500 h-11"
+                onChange={e => { setNationality(e.target.value); if(errors.has('nationality')) setErrors(prev => { const n = new Set(prev); n.delete('nationality'); return n; }); }}
+                className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${errors.has('nationality') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
               />
             </Field>
 
@@ -508,12 +535,12 @@ export default function OnboardingPage() {
             <AnimatePresence>
               {isTourist && (
                 <motion.div variants={fadeUp} initial="initial" animate="animate" exit="exit">
-                  <Field label="Travel preferences" icon={<Globe className="w-4 h-4" />}>
+                  <Field label="Travel preferences" icon={<Globe className="w-4 h-4" />} required error={errors.has('preferences') ? "Required" : undefined}>
                     <Input
                       placeholder="e.g. nature, culture, food..."
                       value={preferences}
-                      onChange={e => setPreferences(e.target.value)}
-                      className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 focus:border-teal-500 h-11"
+                      onChange={e => { setPreferences(e.target.value); if(errors.has('preferences')) setErrors(prev => { const n = new Set(prev); n.delete('preferences'); return n; }); }}
+                      className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${errors.has('preferences') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
                     />
                   </Field>
                 </motion.div>
@@ -530,46 +557,56 @@ export default function OnboardingPage() {
                   exit="exit"
                   className="space-y-5"
                 >
-                  <Field label="Position / Job title" icon={<Briefcase className="w-4 h-4" />}>
+                  <Field label="Position / Job title" icon={<Briefcase className="w-4 h-4" />} required error={errors.has('position') ? "Required" : undefined}>
                     <Input
                       placeholder="e.g. Business Owner"
                       value={position}
-                      onChange={e => setPosition(e.target.value)}
-                      className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 focus:border-teal-500 h-11"
+                      onChange={e => { setPosition(e.target.value); if(errors.has('position')) setErrors(prev => { const n = new Set(prev); n.delete('position'); return n; }); }}
+                      className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${errors.has('position') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
                     />
                   </Field>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <Field label="Province" icon={<MapPin className="w-4 h-4" />}>
-                      <Select value={province} onValueChange={setProvince}>
-                        <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white h-11 focus:border-teal-500">
+                    <Field label="Province" icon={<MapPin className="w-4 h-4" />} required error={errors.has('province') ? "Required" : undefined}>
+                      <Select value={province} onValueChange={val => { setProvince(val); setDistrict(''); if(errors.has('province')) setErrors(prev => { const n = new Set(prev); n.delete('province'); return n; }); }}>
+                        <SelectTrigger className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white h-11 ${errors.has('province') ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700'}`}>
                           <SelectValue placeholder="Select province" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 max-h-60">
-                          {PROVINCES.map(p => (
-                            <SelectItem key={p} value={p} className="text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700">
-                              {p}
+                        <SelectContent className="max-h-60 dark:bg-slate-900">
+                          {provinces.map(p => (
+                            <SelectItem key={p.province_id} value={p.province_en}>
+                              {isLao ? p.province_la : p.province_en}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </Field>
-                    <Field label="District" icon={<MapPin className="w-4 h-4" />}>
-                      <Input
-                        placeholder="District"
-                        value={district}
-                        onChange={e => setDistrict(e.target.value)}
-                        className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 focus:border-teal-500 h-11"
-                      />
+                    <Field label="District" icon={<MapPin className="w-4 h-4" />} required error={errors.has('district') ? "Required" : undefined}>
+                      <Select 
+                        value={district} 
+                        onValueChange={val => { setDistrict(val); if(errors.has('district')) setErrors(prev => { const n = new Set(prev); n.delete('district'); return n; }); }}
+                        disabled={!province}
+                      >
+                        <SelectTrigger className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white h-11 ${errors.has('district') ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700'}`}>
+                          <SelectValue placeholder="Select district" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60 dark:bg-slate-900">
+                          {availableDistricts.map((d: any) => (
+                            <SelectItem key={d.district_en} value={d.district_en}>
+                              {isLao ? d.district_la : d.district_en}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </Field>
                   </div>
 
-                  <Field label="Village" icon={<MapPin className="w-4 h-4" />}>
+                  <Field label="Village" icon={<MapPin className="w-4 h-4" />} required error={errors.has('village') ? "Required" : undefined}>
                     <Input
                       placeholder="Village"
                       value={village}
-                      onChange={e => setVillage(e.target.value)}
-                      className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-500 focus:border-teal-500 h-11"
+                      onChange={e => { setVillage(e.target.value); if(errors.has('village')) setErrors(prev => { const n = new Set(prev); n.delete('village'); return n; }); }}
+                      className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${errors.has('village') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
                     />
                   </Field>
                 </motion.div>
@@ -582,7 +619,7 @@ export default function OnboardingPage() {
           <div className="mt-8 flex flex-col gap-3">
             <Button
               onClick={handleSave}
-              disabled={!isValid || saving}
+              disabled={saving}
               className="w-full h-12 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-lg shadow-teal-500/20 transition-all"
             >
               {saving ? (
@@ -613,19 +650,28 @@ export default function OnboardingPage() {
 function Field({
   label,
   icon,
+  required,
+  error,
   children,
 }: {
   label: string;
   icon: React.ReactNode;
+  required?: boolean;
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-slate-700 dark:text-slate-300 text-sm flex items-center gap-1.5">
         <span className="text-slate-500 dark:text-slate-400">{icon}</span>
-        {label}
+        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </Label>
       {children}
+      {error && (
+        <p className="text-[10px] text-red-500 flex items-center gap-1 mt-1 animate-in fade-in slide-in-from-top-1">
+          <AlertCircle className="w-3 h-3" /> {error}
+        </p>
+      )}
     </div>
   );
 }

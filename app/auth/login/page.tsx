@@ -43,12 +43,14 @@ function LoginForm() {
     }
   };
 
+  console.log('process.env.NEXT_PUBLIC_SITE_URL', process.env.NEXT_PUBLIC_SITE_URL)
+
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-           redirectTo: `/dashboard`
-      },
+       options: {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+    },
     });
     if (error) setError(error.message);
   };
