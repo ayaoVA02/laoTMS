@@ -2,8 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building2, Menu, User, ShieldCheck, Users, Briefcase, Eye } from "lucide-react";
-import { User, ShieldCheck, Users, Briefcase, Eye } from "lucide-react";
+import {
+  Building2,
+  Menu,
+  User,
+  ShieldCheck,
+  Users,
+  Briefcase,
+  Eye,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore, type User as AuthUser } from "@/stores/auth-store";
 import { useTravelPlanStore } from "@/stores/travel-plan-store";
@@ -29,10 +36,10 @@ interface ReviewItem {
 }
 
 const roleLabel: Record<string, { label: string; icon: React.ElementType }> = {
-  ADMIN:        { label: "Admin Dashboard",        icon: ShieldCheck },
-  STAFF:        { label: "Staff Dashboard",         icon: Users      },
-  ENTREPRENEUR: { label: "Entrepreneur Dashboard",  icon: Briefcase  },
-  TOURIST:      { label: "Traveler Dashboard",      icon: User       },
+  ADMIN: { label: "Admin Dashboard", icon: ShieldCheck },
+  STAFF: { label: "Staff Dashboard", icon: Users },
+  ENTREPRENEUR: { label: "Entrepreneur Dashboard", icon: Briefcase },
+  TOURIST: { label: "Traveler Dashboard", icon: User },
 };
 
 const CAN_SWITCH = ["ADMIN", "STAFF", "ENTREPRENEUR"];
@@ -40,7 +47,8 @@ const CAN_SWITCH = ["ADMIN", "STAFF", "ENTREPRENEUR"];
 export default function DashboardPage() {
   const { t } = useTranslation();
   const { user, isAuthenticated } = useAuthStore();
-  const { setSidebarOpen, viewMode, setViewMode, touristTab, setTouristTab } = useAppStore();
+  const { setSidebarOpen, viewMode, setViewMode, touristTab, setTouristTab } =
+    useAppStore();
   const { favorites = [] } = useAttractionStore();
   const { plans = [] } = useTravelPlanStore();
   const role = user?.role || "TOURIST";
@@ -48,14 +56,18 @@ export default function DashboardPage() {
   // Local viewMode state — kept in sync with the store
   const [localViewMode, setLocalViewMode] = useState<ViewMode>("ROLE");
 
-  const [localAttractions, setLocalAttractions] = useState<Attraction[]>(attractions || []);
-  const [socialShareStates, setSocialShareStates] = useState<Record<string, boolean>>(() =>
+  const [localAttractions, setLocalAttractions] = useState<Attraction[]>(
+    attractions || [],
+  );
+  const [socialShareStates, setSocialShareStates] = useState<
+    Record<string, boolean>
+  >(() =>
     (attractions || []).reduce(
       (acc, a) => ({ ...acc, [a.attraction_id]: !!a.social_share }),
       {} as Record<string, boolean>,
     ),
   );
-  
+
   // Fixed state initialization syntax error here
   const [myReviews, setMyReviews] = useState<ReviewItem[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -94,7 +106,9 @@ export default function DashboardPage() {
         query = query.eq("user_id", user.id);
       }
 
-      const { data, error } = await query.order("created_at", { ascending: false });
+      const { data, error } = await query.order("created_at", {
+        ascending: false,
+      });
 
       if (error) {
         console.error("Error fetching attractions:", error);
@@ -113,9 +127,9 @@ export default function DashboardPage() {
   }, [isAuthenticated, user?.id, role]);
 
   useEffect(() => {
-    if (!isAuthenticated || !user?.id) { 
-      setMyReviews([]); 
-      return; 
+    if (!isAuthenticated || !user?.id) {
+      setMyReviews([]);
+      return;
     }
 
     const fetchMyReviews = async () => {
@@ -133,7 +147,9 @@ export default function DashboardPage() {
         return;
       }
 
-      const attractionIds = Array.from(new Set((reviewRows || []).map((r) => r.attraction_id)));
+      const attractionIds = Array.from(
+        new Set((reviewRows || []).map((r) => r.attraction_id)),
+      );
       const attractionNames: Record<string, string> = {};
 
       if (attractionIds.length > 0) {
@@ -141,15 +157,18 @@ export default function DashboardPage() {
           .from("attractions")
           .select("attraction_id, name_en")
           .in("attraction_id", attractionIds);
-          
+
         if (aErr) console.error("Failed to fetch attraction names:", aErr);
-        (attractionRows || []).forEach((a) => { attractionNames[a.attraction_id] = a.name_en; });
+        (attractionRows || []).forEach((a) => {
+          attractionNames[a.attraction_id] = a.name_en;
+        });
       }
 
       setMyReviews(
         (reviewRows || []).map((r) => ({
           id: r.review_id,
-          attractionName: attractionNames[r.attraction_id] || "Unknown Attraction",
+          attractionName:
+            attractionNames[r.attraction_id] || "Unknown Attraction",
           rating: Number(r.rating) || 0,
           content: r.content || "No comment provided.",
           createdAt: r.created_at || "",
@@ -166,7 +185,9 @@ export default function DashboardPage() {
 
   const handleEditAttraction = (updated: Attraction) =>
     setLocalAttractions((prev) =>
-      prev.map((a) => a.attraction_id === updated.attraction_id ? updated : a)
+      prev.map((a) =>
+        a.attraction_id === updated.attraction_id ? updated : a,
+      ),
     );
 
   const handleToggleSocialShare = async (id: string) => {
@@ -181,22 +202,20 @@ export default function DashboardPage() {
     }
   };
 
-
   // useEffect(() => {
   //   if (isAuthReady && !isAuthenticated) {
   //     router.push("/auth/login");
   //   }
   // }, [isAuthReady, isAuthenticated]);
-  if ( !isAuthenticated) {
+  if (!isAuthenticated) {
     return (
       <LoginRequired
         title="Dashboard access required"
         description="Sign in to manage your attractions and view analytics."
         redirectTo="/dashboard"
       />
-    )
+    );
   }
-
 
   const canSwitch = CAN_SWITCH.includes(role);
   const activeView = canSwitch ? localViewMode : "ROLE";
@@ -244,7 +263,6 @@ export default function DashboardPage() {
     }
   };
 
-
   const RoleIcon = roleLabel[role]?.icon ?? User;
 
   return (
@@ -268,7 +286,8 @@ export default function DashboardPage() {
                 <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5">
                   <RoleIcon className="w-3.5 h-3.5 shrink-0" />
                   <span>
-                    Welcome back, <strong>{user?.name || "Guest"}</strong> ({roleLabel[role]?.label})
+                    Welcome back, <strong>{user?.name || "Guest"}</strong> (
+                    {roleLabel[role]?.label})
                   </span>
                 </p>
               </div>
@@ -305,7 +324,7 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                {/* <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="icon"
@@ -331,7 +350,10 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-teal-500/5 border border-teal-500/20 text-teal-700 dark:text-teal-400 text-xs sm:text-sm">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 shrink-0" />
-                    <span>You are currently simulating the traveler platform workspace experience.</span>
+                    <span>
+                      You are currently simulating the traveler platform
+                      workspace experience.
+                    </span>
                   </div>
                   <button
                     onClick={() => handleViewModeChange("ROLE")}
@@ -347,7 +369,9 @@ export default function DashboardPage() {
           <AnimatePresence mode="wait">
             {/* Replaced invalid <motion.key> element with correct <motion.div> layout container */}
             <motion.div
-              key={activeView === "TOURIST" ? `tourist-${touristTab}` : activeView}
+              key={
+                activeView === "TOURIST" ? `tourist-${touristTab}` : activeView
+              }
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
