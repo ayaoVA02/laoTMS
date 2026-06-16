@@ -40,48 +40,48 @@ interface SidebarProps {
 
 const roleMenuItems: Record<UserRole, MenuItem[]> = {
   ADMIN: [
-    { href: "/dashboard",            labelKey: "sidebar.overview",     icon: LayoutDashboard, tabKey: "overview"  },
-    { href: "/dashboard/analytics",  labelKey: "sidebar.analytics",    icon: BarChart3,       tabKey: "overview"  },
-    { href: "/dashboard/users",      labelKey: "sidebar.users",        icon: Users,           tabKey: "overview"  },
-    { href: "/dashboard/attractions",labelKey: "sidebar.attractions",  icon: Building2,       tabKey: "overview"  },
-    { href: "/dashboard/settings",   labelKey: "sidebar.settings",     icon: Settings,        tabKey: "overview"  },
+    { href: "/dashboard", labelKey: "sidebar.overview", icon: LayoutDashboard, tabKey: "overview" },
+    { href: "/dashboard/analytics", labelKey: "sidebar.analytics", icon: BarChart3, tabKey: "overview" },
+    { href: "/dashboard/users", labelKey: "sidebar.users", icon: Users, tabKey: "overview" },
+    { href: "/dashboard/attractions", labelKey: "sidebar.attractions", icon: Building2, tabKey: "overview" },
+    { href: "/dashboard/settings", labelKey: "sidebar.settings", icon: Settings, tabKey: "overview" },
   ],
   STAFF: [
-    { href: "/dashboard",                      labelKey: "sidebar.overview",           icon: LayoutDashboard, tabKey: "overview" },
-    { href: "/dashboard/approve-attractions",  labelKey: "sidebar.approveAttractions", icon: CheckSquare,     tabKey: "overview" },
-    { href: "/dashboard/categories",           labelKey: "sidebar.categories",         icon: Tag,             tabKey: "overview" },
-    { href: "/dashboard/notifications",        labelKey: "sidebar.notifications",      icon: Bell,            tabKey: "overview" },
+    { href: "/dashboard", labelKey: "sidebar.overview", icon: LayoutDashboard, tabKey: "overview" },
+    { href: "/dashboard/approve-attractions", labelKey: "sidebar.approveAttractions", icon: CheckSquare, tabKey: "overview" },
+    { href: "/dashboard/categories", labelKey: "sidebar.categories", icon: Tag, tabKey: "overview" },
+    { href: "/dashboard/notifications", labelKey: "sidebar.notifications", icon: Bell, tabKey: "overview" },
   ],
   ENTREPRENEUR: [
-    { href: "/dashboard",                   labelKey: "sidebar.overview",         icon: LayoutDashboard, tabKey: "overview" },
-    { href: "/dashboard/my-attractions",    labelKey: "sidebar.myAttractions",    icon: Building2,       tabKey: "overview" },
-    { href: "/dashboard/create-attraction", labelKey: "sidebar.createAttraction", icon: Plus,            tabKey: "overview" },
-    { href: "/dashboard/promotions",        labelKey: "sidebar.promotions",       icon: BarChart3,       tabKey: "overview" },
-    { href: "/dashboard/notifications",     labelKey: "sidebar.notifications",    icon: Bell,            tabKey: "overview" },
+    { href: "/dashboard", labelKey: "sidebar.overview", icon: LayoutDashboard, tabKey: "overview" },
+    { href: "/dashboard/my-attractions", labelKey: "sidebar.myAttractions", icon: Building2, tabKey: "overview" },
+    { href: "/dashboard/create-attraction", labelKey: "sidebar.createAttraction", icon: Plus, tabKey: "overview" },
+    { href: "/dashboard/promotions", labelKey: "sidebar.promotions", icon: BarChart3, tabKey: "overview" },
+    { href: "/dashboard/notifications", labelKey: "sidebar.notifications", icon: Bell, tabKey: "overview" },
   ],
   TOURIST: [
-    { href: "/dashboard",            labelKey: "sidebar.overview",  icon: LayoutDashboard, tabKey: "overview"  },
-    { href: "/dashboard/my-plans",   labelKey: "sidebar.myPlans",   icon: Map,             tabKey: "my-plans"  },
-    { href: "/dashboard/favorites",  labelKey: "sidebar.favorites", icon: Building2,       tabKey: "favorites" },
-    { href: "/dashboard/reviews",    labelKey: "sidebar.reviews",   icon: FileText,        tabKey: "reviews"   },
+    { href: "/dashboard", labelKey: "sidebar.overview", icon: LayoutDashboard, tabKey: "overview" },
+    { href: "/dashboard/my-plans", labelKey: "sidebar.myPlans", icon: Map, tabKey: "my-plans" },
+    { href: "/dashboard/favorites", labelKey: "sidebar.favorites", icon: Building2, tabKey: "favorites" },
+    { href: "/dashboard/reviews", labelKey: "sidebar.reviews", icon: FileText, tabKey: "reviews" },
   ],
 };
 
 const roleBadgeColors: Record<UserRole | "TOURIST_VIEW", string> = {
-  ADMIN:        "bg-red-500/20 text-red-400 border-red-500/30",
-  STAFF:        "bg-teal-500/20 text-teal-400 border-teal-500/30",
+  ADMIN: "bg-red-500/20 text-red-400 border-red-500/30",
+  STAFF: "bg-teal-500/20 text-teal-400 border-teal-500/30",
   ENTREPRENEUR: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-  TOURIST:      "bg-sky-500/20 text-sky-400 border-sky-500/30",
+  TOURIST: "bg-sky-500/20 text-sky-400 border-sky-500/30",
   TOURIST_VIEW: "bg-sky-500/20 text-sky-400 border-sky-500/30 border-dashed",
 };
 
 const sidebarVariants = {
-  expanded:  { width: 264 },
-  collapsed: { width: 72  },
+  expanded: { width: 264 },
+  collapsed: { width: 72 },
 };
 
 const labelVariants = {
-  expanded:  { opacity: 1, x: 0,  display: "block" },
+  expanded: { opacity: 1, x: 0, display: "block" },
   collapsed: { opacity: 0, x: -8, transitionEnd: { display: "none" } },
 };
 
@@ -92,7 +92,16 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
   const { sidebarOpen, toggleSidebar, setSidebarOpen, touristTab, setTouristTab } = useAppStore();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    // Set initial sidebar state based on screen width
+    // Assuming 'lg' breakpoint is 1024px, consistent with Tailwind's default
+    if (window.innerWidth >= 1024) {
+      setSidebarOpen(true); // Always show on desktop
+    } else {
+      setSidebarOpen(false); // Close on mobile
+    }
+  }, [setSidebarOpen]);
 
   const menuItems = useMemo(() => {
     if (!user || viewMode === "TOURIST") return roleMenuItems.TOURIST;
@@ -181,7 +190,7 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-1">
-          {menuItems.map((item, index) => {
+          {menuItems.map((item: any, index: any) => {
             const Icon = item.icon;
             const isTouristView = viewMode === "TOURIST";
 
@@ -190,11 +199,10 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
               ? touristTab === item.tabKey
               : pathname === item.href;
 
-            const sharedClassName = `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-              isActive
+            const sharedClassName = `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${isActive
                 ? "bg-teal-500/15 text-teal-400 shadow-sm shadow-teal-500/10"
                 : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
-            }`;
+              }`;
 
             const innerContent = (
               <>
@@ -304,11 +312,10 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
                 {user?.name || "Guest"}
               </p>
               <span
-                className={`inline-flex items-center mt-0.5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md border ${
-                  viewMode === "TOURIST" && user?.role !== "TOURIST"
+                className={`inline-flex items-center mt-0.5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md border ${viewMode === "TOURIST" && user?.role !== "TOURIST"
                     ? roleBadgeColors.TOURIST_VIEW
                     : roleBadgeColors[user?.role || "TOURIST"]
-                }`}
+                  }`}
               >
                 {viewMode === "TOURIST" && user?.role !== "TOURIST"
                   ? "Previewing Traveler"

@@ -286,7 +286,7 @@ function AttractionsContent() {
       {/* Filter Bar */}
       <div className="sticky top-0 z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3 py-3.5  scrollbar-none">
+          <div className="flex items-center gap-3 py-2 sm:py-3.5">
             {/* Sliders icon */}
             <SlidersHorizontal className="h-5 w-5 shrink-0 text-teal-600" />
 
@@ -310,7 +310,7 @@ function AttractionsContent() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-gray-100 bg-white/95 backdrop-blur-md p-1.5 shadow-2xl z-50 overflow-hidden"
+                    className="absolute left-0 top-full mt-2 w-56 rounded-2xl border border-gray-100 bg-white/95 backdrop-blur-md p-1.5 shadow-2xl z-50 overflow-hidden"
                   >
                     <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">
                       {t("attractions.sort.title", "Sort By")}
@@ -339,29 +339,27 @@ function AttractionsContent() {
                 )}
               </AnimatePresence>
             </div>
-            {/* Category Pills */}
-            {allCategories.map((cat) => {
-              const isActive =
-                (cat.id === "all" && selectedCategory === "all") ||
-                cat.id === selectedCategory;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategoryChange(cat.id)}
-                  className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${isActive
-                      ? "bg-teal-600 text-white shadow-md shadow-teal-600/25"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                >
-                  {cat.name}
-                </button>
-              );
-            })}
 
-            {/* Spacer */}
-            <div className="flex-1" />
-
-
+            {/* Category Pills - Scrollable Area */}
+            <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none no-scrollbar py-1">
+              {allCategories.map((cat) => {
+                const isActive =
+                  (cat.id === "all" && selectedCategory === "all") ||
+                  cat.id === selectedCategory;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategoryChange(cat.id)}
+                    className={`shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${isActive
+                        ? "bg-teal-600 text-white shadow-md shadow-teal-600/25"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                  >
+                    {cat.name}
+                  </button>
+                );
+              })}
+            </div>
 
             {/* View Toggle */}
             <div className="flex shrink-0 items-center rounded-lg border border-gray-200 bg-white p-0.5">
