@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   User,
@@ -10,6 +10,7 @@ import {
   Edit3,
   Save,
   X,
+  Loader2,
   MapPin,
   Calendar,
   Star,
@@ -19,8 +20,11 @@ import {
   Bell,
   ChevronRight,
   LogOut,
+  Phone,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 import { useAuthStore, type UserRole } from "@/stores/auth-store";
 import { useAttractionStore } from "@/stores/attraction-store";
 import { useTravelPlanStore } from "@/stores/travel-plan-store";
@@ -42,6 +46,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
+import provincesData from "@/laos_provinces_districts.json";
+import { uploadToR2, getR2Url } from "@/lib/upload";
 
 const roleColors: Record<UserRole, string> = {
   ADMIN: "from-red-500 to-rose-600",
@@ -69,36 +75,102 @@ const itemVariants = {
 
 export default function ProfilePage() {
   const { t, i18n } = useTranslation();
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, logout, initAuth } = useAuthStore();
   const { favorites = [], fetchFavorites } = useAttractionStore();
   const { plans = [], fetchPlans } = useTravelPlanStore();
   const { unreadCount } = useNotificationStore();
   const { language, setLanguage } = useAppStore();
   const { theme, setTheme } = useTheme();
+  const isLao = i18n.language === "la";
 
   const [mounted, setMounted] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [profileImg, setProfileImg] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
-    name: user?.name || "",
+    firstName: "",
+    lastName: "",
     email: user?.email || "",
-    bio: "Passionate traveler exploring the beauty of Laos. Love temples, nature, and local cuisine.",
-    phone: "+856 20 1234 5678",
-    location: "Vientiane, Laos",
+    phone: "",
+    nationality: "",
+    gender: "MALE",
+    // Role specific
+    preferences: "",
+    position: "",
+    province: "",
+    district: "",
+    village: "",
+    staffCode: "",
   });
 
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.name,
-        email: user.email,
-        bio: "Passionate traveler exploring the beauty of Laos. Love temples, nature, and local cuisine.",
-        phone: "+856 20 1234 5678",
-        location: "Vientiane, Laos",
-      });
+    async function fetchProfile() {
+      if (!user) return;
+      setLoading(true);
+      const role = user.role;
+      let table = "";
+      if (role === "TOURIST") table = "tourists";
+      else if (role === "ENTREPRENEUR") table = "entrepreneurs";
+      else if (role === "STAFF") table = "staffs";
+
+      const baseData = {
+        firstName: user.name?.split(" ")[0] || "",
+        lastName: user.name?.split(" ").slice(1).join(" ") || "",
+        email: user.email || "",
+        phone: "",
+        nationality: "",
+        gender: "MALE",
+        preferences: "",
+        position: "",
+        province: "",
+        district: "",
+        village: "",
+        staffCode: "",
+      };
+
+      if (table) {
+        const { data, error } = await supabase
+          .from(table)
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        
+        if (data) {
+          setFormData({
+            ...baseData,
+            firstName: data.first_name || baseData.firstName,
+            lastName: data.last_name || baseData.lastName,
+            phone: data.phone || "",
+            nationality: data.nationality || "",
+            gender: data.gender || "MALE",
+            preferences: data.preferences || "",
+            position: data.position || "",
+            province: data.province || "",
+            district: data.district || "",
+            village: data.village || "",
+            staffCode: data.staff_code || "",
+          });
+          const imgValue = data.profile_img || user.avatar || ""; // This could be a key or a full URL
+          setProfileImg(getR2Url(imgValue)); // Ensure full URL is stored in state
+          setPreviewUrl(getR2Url(imgValue)); // Ensure full URL is used for preview
+        } else {
+          setFormData(baseData);
+        }
+      } else {
+        setFormData(baseData);
+      }
+      setLoading(false);
     }
-  }, [user]);
+    if (isAuthenticated) fetchProfile();
+  }, [user, isAuthenticated]);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -135,14 +207,87 @@ export default function ProfilePage() {
     { label: "Notifications", value: unreadCount, icon: Bell },
   ];
 
-  const handleSave = () => {
-    setEditing(false);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploading(true);
+    const localUrl = URL.createObjectURL(file);
+    setPreviewUrl(localUrl);
+
+    try {
+      const key = await uploadToR2(file, 'profiles');
+      setProfileImg(getR2Url(key)); // Store full URL in state
+      setPreviewUrl(getR2Url(key));
+      toast.success("Photo uploaded!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to upload photo");
+      setPreviewUrl(profileImg);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+
+    try {
+      const role = user.role;
+      let table = "";
+      const updateData: any = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        nationality: formData.nationality,
+        gender: formData.gender,
+        profile_img: profileImg,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (role === "TOURIST") {
+        table = "tourists";
+        updateData.preferences = formData.preferences;
+      } else if (role === "ENTREPRENEUR") {
+        table = "entrepreneurs";
+        updateData.position = formData.position;
+        updateData.province = formData.province;
+        updateData.district = formData.district;
+        updateData.village = formData.village;
+      } else if (role === "STAFF") {
+        table = "staffs";
+        updateData.province = formData.province;
+        updateData.district = formData.district;
+        updateData.village = formData.village;
+      }
+
+      if (table) {
+        const { error } = await supabase
+          .from(table)
+          .update(updateData)
+          .eq("user_id", user.id);
+        if (error) throw error;
+      }
+
+      await initAuth();
+      toast.success("Profile updated successfully!");
+      setEditing(false);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleLanguageChange = (lang: "en" | "la") => {
     setLanguage(lang);
     i18n.changeLanguage(lang);
   };
+
+  const provinces = provincesData[0].provinces;
+  const availableDistricts = provinces.find(p => p.province_en === formData.province)?.districts || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/20">
@@ -160,12 +305,27 @@ export default function ProfilePage() {
                 {/* Avatar - overlapping the cover */}
                 <div className="relative -mt-12 sm:-mt-14 mb-4 flex items-end gap-4">
                   <div className="relative shrink-0">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold shadow-xl shadow-teal-500/20 border-4 border-white dark:border-slate-900">
-                      {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-900 overflow-hidden shadow-xl relative">
+                      {previewUrl ? (
+                        <img src={previewUrl} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold">
+                           {user?.name?.charAt(0)?.toUpperCase() || "U" } 
+                        </div>
+                      )}
+                      {uploading && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <Loader2 className="w-5 h-5 text-white animate-spin" />
+                        </div>
+                      )}
                     </div>
-                    <button className="absolute -bottom-1 -right-1 w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white dark:bg-slate-800 border border-border shadow-sm flex items-center justify-center hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors">
+                    <button 
+                      onClick={() => fileRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white dark:bg-slate-800 border border-border shadow-sm flex items-center justify-center hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors"
+                    >
                       <Camera className="w-3.5 h-3.5 text-teal-600" />
                     </button>
+                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                   </div>
                   <div className="flex-1 min-w-0 pb-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -189,15 +349,16 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Stats row */}
-                <div className="grid grid-cols-4 gap-2 sm:gap-4">
+                {/* <div className="grid grid-cols-4 gap-2 sm:gap-4">
                   {stats.map((stat) => (
-                    <div key={stat.label} className="text-center p-2 sm:p-3 rounded-xl bg-muted/50">
+                    <div key={stat.label} className="text-center p-2 sm:p-3 rounded-xl bg-muted/30 dark:bg-slate-800/50">
                       <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 mx-auto text-teal-500 mb-1" />
                       <p className="text-lg sm:text-2xl font-bold">{stat.value}</p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground">{stat.label}</p>
                     </div>
                   ))}
-                </div>
+                
+                </div> */}
               </div>
             </Card>
           </motion.div>
@@ -215,12 +376,12 @@ export default function ProfilePage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="profile-name" className="text-sm">Full Name</Label>
-                      <Input id="profile-name" value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} />
+                      <Label htmlFor="firstName" className="text-sm">First Name</Label>
+                      <Input id="firstName" value={formData.firstName} onChange={(e) => setFormData((p) => ({ ...p, firstName: e.target.value }))} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="profile-email" className="text-sm">Email</Label>
-                      <Input id="profile-email" type="email" value={formData.email} onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} />
+                      <Label htmlFor="lastName" className="text-sm">Last Name</Label>
+                      <Input id="lastName" value={formData.lastName} onChange={(e) => setFormData((p) => ({ ...p, lastName: e.target.value }))} />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -229,19 +390,74 @@ export default function ProfilePage() {
                       <Input id="profile-phone" value={formData.phone} onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="profile-location" className="text-sm">Location</Label>
-                      <Input id="profile-location" value={formData.location} onChange={(e) => setFormData((p) => ({ ...p, location: e.target.value }))} />
+                      <Label htmlFor="nationality" className="text-sm">Nationality</Label>
+                      <Input id="nationality" value={formData.nationality} onChange={(e) => setFormData((p) => ({ ...p, nationality: e.target.value }))} />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="profile-bio" className="text-sm">Bio</Label>
-                    <Textarea id="profile-bio" value={formData.bio} onChange={(e) => setFormData((p) => ({ ...p, bio: e.target.value }))} className="min-h-[80px]" />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm">Gender</Label>
+                      <Select value={formData.gender} onValueChange={(val) => setFormData(p => ({ ...p, gender: val }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="MALE">Male</SelectItem>
+                          <SelectItem value="FEMALE">Female</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {role === "ENTREPRENEUR" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="position" className="text-sm">Position / Job Title</Label>
+                        <Input id="position" value={formData.position} onChange={(e) => setFormData((p) => ({ ...p, position: e.target.value }))} />
+                      </div>
+                    )}
                   </div>
+
+                  {(role === "ENTREPRENEUR" || role === "STAFF") && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Province</Label>
+                        <Select value={formData.province} onValueChange={(val) => setFormData(p => ({ ...p, province: val, district: "" }))}>
+                          <SelectTrigger><SelectValue placeholder="Select province" /></SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {provinces.map(p => (
+                              <SelectItem key={p.province_id} value={p.province_en}>{isLao ? p.province_la : p.province_en}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">District</Label>
+                        <Select value={formData.district} onValueChange={(val) => setFormData(p => ({ ...p, district: val }))} disabled={!formData.province}>
+                          <SelectTrigger><SelectValue placeholder="Select district" /></SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {availableDistricts.map((d: any) => (
+                              <SelectItem key={d.district_en} value={d.district_en}>{isLao ? d.district_la : d.district_en}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="village" className="text-sm">Village</Label>
+                        <Input id="village" value={formData.village} onChange={(e) => setFormData((p) => ({ ...p, village: e.target.value }))} />
+                      </div>
+                    </div>
+                  )}
+
+                  {role === "TOURIST" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="preferences" className="text-sm">Travel Preferences</Label>
+                      <Textarea id="preferences" value={formData.preferences} onChange={(e) => setFormData((p) => ({ ...p, preferences: e.target.value }))} className="min-h-[80px]" />
+                    </div>
+                  )}
+
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setEditing(false)}>{t("common.cancel")}</Button>
-                    <Button className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white" onClick={handleSave}>
-                      <Save className="w-4 h-4 mr-1.5" />
-                      {t("common.save")}
+                    <Button variant="outline" onClick={() => setEditing(false)} disabled={saving}>{t("common.cancel")}</Button>
+                    <Button className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white min-w-[100px]" onClick={handleSave} disabled={saving}>
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                        <><Save className="w-4 h-4 mr-1.5" />{t("common.save")}</>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
@@ -269,12 +485,39 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                      <MapPin className="w-4 h-4 text-teal-500 shrink-0" />
+                      <Phone className="w-4 h-4 text-teal-500 shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Location</p>
-                        <p className="text-sm font-medium truncate">{formData.location}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Phone</p>
+                        <p className="text-sm font-medium truncate">{formData.phone || "Not set"}</p>
                       </div>
                     </div>
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                      <Globe className="w-4 h-4 text-teal-500 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Nationality</p>
+                        <p className="text-sm font-medium truncate">{formData.nationality || "Not set"}</p>
+                      </div>
+                    </div>
+                    {(role === "ENTREPRENEUR" || role === "STAFF") && formData.province && (
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                        <MapPin className="w-4 h-4 text-teal-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Address</p>
+                          <p className="text-sm font-medium truncate">
+                            {formData.village}, {formData.district}, {formData.province}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {role === "STAFF" && formData.staffCode && (
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                        <Shield className="w-4 h-4 text-teal-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Staff ID</p>
+                          <p className="text-sm font-medium truncate">{formData.staffCode}</p>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
                       <Calendar className="w-4 h-4 text-teal-500 shrink-0" />
                       <div className="min-w-0">
@@ -282,10 +525,12 @@ export default function ProfilePage() {
                         <p className="text-sm font-medium">January 2025</p>
                       </div>
                     </div>
-                    <div className="p-3 rounded-xl bg-muted/50">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Bio</p>
-                      <p className="text-sm leading-relaxed">{formData.bio}</p>
-                    </div>
+                    {role === "TOURIST" && formData.preferences && (
+                      <div className="p-3 rounded-xl bg-muted/50">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Travel Preferences</p>
+                        <p className="text-sm leading-relaxed">{formData.preferences}</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -193,7 +193,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         password,
         options: {
           data: { 
-            role: role || 'TOURIST', 
+            role: role, 
             is_active: true, 
             first_name: firstName, 
             last_name: lastName,

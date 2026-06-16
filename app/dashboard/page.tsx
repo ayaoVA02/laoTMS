@@ -2,15 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Building2,
-  Menu,
-  User,
-  ShieldCheck,
-  Users,
-  Briefcase,
-  Eye,
-} from "lucide-react";
+import { Building2, Menu, User, ShieldCheck, Users, Briefcase, Eye } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore, type User as AuthUser } from "@/stores/auth-store";
 import { useTravelPlanStore } from "@/stores/travel-plan-store";
@@ -56,18 +48,14 @@ export default function DashboardPage() {
   // Local viewMode state — kept in sync with the store
   const [localViewMode, setLocalViewMode] = useState<ViewMode>("ROLE");
 
-  const [localAttractions, setLocalAttractions] = useState<Attraction[]>(
-    attractions || [],
-  );
-  const [socialShareStates, setSocialShareStates] = useState<
-    Record<string, boolean>
-  >(() =>
+  const [localAttractions, setLocalAttractions] = useState<Attraction[]>(attractions || []);
+  const [socialShareStates, setSocialShareStates] = useState<Record<string, boolean>>(() =>
     (attractions || []).reduce(
       (acc, a) => ({ ...acc, [a.attraction_id]: !!a.social_share }),
       {} as Record<string, boolean>,
     ),
   );
-
+  
   // Fixed state initialization syntax error here
   const [myReviews, setMyReviews] = useState<ReviewItem[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -324,7 +312,7 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
+                {/* <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="icon"

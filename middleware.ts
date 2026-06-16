@@ -28,45 +28,43 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const isAuth = !!user
   const pathname = request.nextUrl.pathname
-  // Check if onboarding is completed via metadata flag
-  const onboardingCompleted = user?.user_metadata?.onboarding_completed === true
 
+  // Define roles that bypass onboarding.
+  // We treat setup as "completed" if the user has an assigned role or the flag is true.
+  const userRole = user?.user_metadata?.role?.toUpperCase()
+  const bypassRoles = ['ADMIN', 'STAFF', 'TOURIST', 'ENTREPRENEUR']
+  const hasBypassRole = !!userRole && bypassRoles.includes(userRole)
+  const onboardingCompleted = user?.user_metadata?.onboarding_completed === true || hasBypassRole
+
+  const isRoot = pathname === '/'
   const isDashboard = pathname.startsWith('/dashboard')
   const isAuthPage = pathname.startsWith('/auth')
   const isProfileSetup = pathname.startsWith('/onboarding')
+  const hasOAuthCode = request.nextUrl.searchParams.has('code')
 
-  // 1. If authenticated but onboarding is NOT completed, force them to onboarding ONLY IF trying to access dashboard
-  // This allows users to browse public pages (Home, Attractions, etc.) even if they haven't finished setup.
-  if (isAuth && !onboardingCompleted && isDashboard && !isProfileSetup) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/onboarding'
-    return NextResponse.redirect(url)
+  // Handle Authenticated Users
+  if (isAuth) {
+    if (onboardingCompleted) {
+      // If setup is complete (or bypassed by role),
+      // redirect away from Auth pages, Onboarding page, or the OAuth callback URL to Dashboard.
+      // Allow access to root ('/') and dashboard ('/dashboard') if onboarding is complete.
+      if (isAuthPage || isProfileSetup || hasOAuthCode) {
+        const res = NextResponse.redirect(new URL('/dashboard', request.url))
+        supabaseResponse.cookies.getAll().forEach((c) => res.cookies.set(c))
+        return res
+      }
+    } else {
+      // If onboarding is NOT complete, force them to the onboarding page
+      // from any other page (root, dashboard, auth pages, or OAuth callback),
+      // unless they are already on the onboarding page.
+      if ((isRoot || isAuthPage || isDashboard || hasOAuthCode) && !isProfileSetup) {
+        const res = NextResponse.redirect(new URL('/onboarding', request.url))
+        supabaseResponse.cookies.getAll().forEach((c) => res.cookies.set(c))
+        return res
+      }
+    }
   }
 
-  console.log("-------------------start--------------------------")
-  console.log("isAUTH:", isAuth)
-  console.log("onboardingCompleted:", onboardingCompleted)
-  console.log("isDashboard:", isDashboard)
-  console.log("isAuthPage:", isAuthPage)
-    console.log("------------------end---------------------------")
-
-
-  if (!isAuth && isDashboard) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    url.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(url)
-  }
-
-  // 2. If authenticated and onboarding IS completed, don't let them go back to login or onboarding
-  if (isAuth && onboardingCompleted && (isAuthPage || isProfileSetup)) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
-  }
-
-  // ✅ Must return supabaseResponse (not NextResponse.next())
-  // so the refreshed session cookies are passed to the browser
   return supabaseResponse
 }
 

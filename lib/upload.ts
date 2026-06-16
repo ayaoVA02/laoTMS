@@ -33,5 +33,5 @@ export function getR2Url(key: string): string {
   // If it's already a full URL, return as is
   if (key.startsWith('http')) return key;
   // Otherwise combine with base URL
-  return `${process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL}/${key}`;
+  return `${process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL}${key}`;
 }
