@@ -44,14 +44,9 @@ export default function DashboardPage() {
   const { plans = [] } = useTravelPlanStore();
   const role = user?.role || "TOURIST";
 
-  // Local viewMode state — kept in sync with the store
   const [localViewMode, setLocalViewMode] = useState<ViewMode>("ROLE");
-
-  // Initialize with empty array; data will be fetched in useEffect
   const [localAttractions, setLocalAttractions] = useState<Attraction[]>([]);
-  // Initialize with empty object; states will be populated after attractions are fetched
   const [socialShareStates, setSocialShareStates] = useState<Record<string, boolean>>({});
-
   const [myReviews, setMyReviews] = useState<ReviewItem[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
 
@@ -68,34 +63,29 @@ export default function DashboardPage() {
 
   const handleViewModeChange = (mode: ViewMode) => {
     setLocalViewMode(mode);
-    setViewMode(mode); // sync to store so sidebar reads it
+    setViewMode(mode);
     if (mode === "TOURIST") {
-      setTouristTab("overview"); // reset tab when switching to tourist view
+      setTouristTab("overview");
     }
     if (typeof window !== "undefined" && user?.id) {
       localStorage.setItem(`laotms_view_mode_${user.id}`, mode);
     }
   };
 
-  // Fetch Real Attraction Data from Supabase
+  // Fetch attraction data from Supabase
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
 
     const fetchAttractions = async () => {
       let query = supabase.from("attractions").select("*");
-
-      // Filter by user_id if entrepreneur
       if (role === "ENTREPRENEUR") {
         query = query.eq("user_id", user.id);
       }
-
       const { data, error } = await query.order("created_at", { ascending: false });
-
       if (error) {
         console.error("Error fetching attractions:", error);
       } else if (data) {
         setLocalAttractions(data as Attraction[]);
-        // Initialize social share states
         const states = data.reduce(
           (acc, a) => ({ ...acc, [a.attraction_id]: a.social_share }),
           {} as Record<string, boolean>,
@@ -108,9 +98,9 @@ export default function DashboardPage() {
   }, [isAuthenticated, user?.id, role]);
 
   useEffect(() => {
-    if (!isAuthenticated || !user?.id) { 
-      setMyReviews([]); 
-      return; 
+    if (!isAuthenticated || !user?.id) {
+      setMyReviews([]);
+      return;
     }
 
     const fetchMyReviews = async () => {
@@ -136,7 +126,6 @@ export default function DashboardPage() {
           .from("attractions")
           .select("attraction_id, name_en")
           .in("attraction_id", attractionIds);
-          
         if (aErr) console.error("Failed to fetch attraction names:", aErr);
         (attractionRows || []).forEach((a) => { attractionNames[a.attraction_id] = a.name_en; });
       }
@@ -161,7 +150,7 @@ export default function DashboardPage() {
 
   const handleEditAttraction = (updated: Attraction) =>
     setLocalAttractions((prev) =>
-      prev.map((a) => a.attraction_id === updated.attraction_id ? updated : a)
+      prev.map((a) => (a.attraction_id === updated.attraction_id ? updated : a))
     );
 
   const handleToggleSocialShare = async (id: string) => {
@@ -170,34 +159,39 @@ export default function DashboardPage() {
       .from("attractions")
       .update({ social_share: newState })
       .eq("attraction_id", id);
-
     if (!error) {
       setSocialShareStates((prev) => ({ ...prev, [id]: newState }));
     }
   };
 
-
-  // useEffect(() => {
-  //   if (isAuthReady && !isAuthenticated) {
-  //     router.push("/auth/login");
-  //   }
-  // }, [isAuthReady, isAuthenticated]);
-  if ( !isAuthenticated) {
+  if (!isAuthenticated) {
     return (
       <LoginRequired
         title="Dashboard access required"
         description="Sign in to manage your attractions and view analytics."
         redirectTo="/dashboard"
       />
-    )
+    );
   }
 
-
   const canSwitch = CAN_SWITCH.includes(role);
-  const activeView = canSwitch ? localViewMode : "ROLE";
-  const myAttractions = localAttractions.filter(() => role === "ENTREPRENEUR");
+
+  // ── KEY FIX 1 ──────────────────────────────────────────────────────────────
+  // TOURIST role never has a "ROLE" management view, so activeView is always
+  // "TOURIST" for them. For roles that CAN switch, respect localViewMode.
+  const activeView: ViewMode = canSwitch ? localViewMode : "TOURIST";
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // Only relevant when role === "ENTREPRENEUR" AND in management view
+  const myAttractions = role === "ENTREPRENEUR"
+    ? localAttractions
+    : [];
 
   const renderContent = () => {
+    // ── KEY FIX 2 ──────────────────────────────────────────────────────────
+    // Tourist view always renders TouristDashboard, regardless of role.
+    // This means ADMIN/STAFF/ENTREPRENEUR switching to "Traveler View" get the
+    // exact same dashboard a TOURIST user sees.
     if (activeView === "TOURIST") {
       return (
         <TouristDashboard
@@ -210,6 +204,9 @@ export default function DashboardPage() {
         />
       );
     }
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Management views (only reachable when canSwitch === true)
     switch (role) {
       case "ADMIN":
         return <AdminDashboard attractionsCount={localAttractions.length} />;
@@ -239,12 +236,10 @@ export default function DashboardPage() {
     }
   };
 
-
   const RoleIcon = roleLabel[role]?.icon ?? User;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/20">
-      {/* Passing activeView ensures your custom Sidebar correctly watches and re-renders navigation matching this view */}
       <Sidebar viewMode={activeView} />
 
       <div className="lg:pl-[264px] transition-all duration-300">
@@ -269,6 +264,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0">
+                {/* Only roles that CAN switch see the toggle */}
                 {canSwitch && (
                   <div className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border shadow-sm">
                     <Button
@@ -300,7 +296,7 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="icon"
@@ -340,7 +336,6 @@ export default function DashboardPage() {
           </AnimatePresence>
 
           <AnimatePresence mode="wait">
-            {/* Replaced invalid <motion.key> element with correct <motion.div> layout container */}
             <motion.div
               key={activeView === "TOURIST" ? `tourist-${touristTab}` : activeView}
               initial={{ opacity: 0, y: 8 }}
