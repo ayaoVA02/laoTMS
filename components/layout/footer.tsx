@@ -177,7 +177,7 @@ export default function Footer() {
               {t("footer.rights", "All rights reserved.")}
             </p>
             <p className="flex items-center gap-1.5 text-xs text-slate-500">
-              {t("footer.madeWith", "Made with 🇱🇦")}{" "}
+              {t("footer.madeWith", "Made with VT ")}{" "}
               {t("footer.inLaos", "in Laos")}
             </p>
           </div>
