@@ -15,38 +15,41 @@ import Image from "next/image";
 import Footer from "@/components/layout/footer";
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { muelo, numfon, yao } from "@/assets";
 
-const SLIDES = [
-  {
-    image: "https://www.tourismlaos.org/wp-content/uploads/2022/03/76.%E0%BA%9B%E0%BA%B0%E0%BA%95%E0%BA%B9%E0%BB%84%E0%BA%8A%E0%BA%99%E0%BA%B0%E0%BA%84%E0%BA%AD%E0%BA%99%E0%BA%AB%E0%BA%A5%E0%BA%A7%E0%BA%87-copy-1030x773.jpg",
-    badge: "Welcome Home",
-    title: "Explore Laos",
-    subtitle: "Your homeland holds more than you know — from golden monuments to misty mountains, rediscover Laos one journey at a time.",
-    accent: "from-red-300 via-rose-300 to-orange-400",
-  },
-  {
-    image: "https://www.journeyera.com/wp-content/uploads/2016/12/luang-prabang-photos-08807.jpg",
-    badge: "UNESCO World Heritage",
-    title: "Luang Prabang",
-    subtitle: "Where saffron-robed monks glide through misty streets at dawn and gilded temples glow against jungle-draped mountains.",
-    accent: "from-amber-300 via-yellow-300 to-orange-400",
-  },
-  {
-    image: "https://worldmatetravel.com/uploads/articles/best-places-to-visit-in-laos-countries-of-explorers-2802164807.jpg",
-    badge: "Adventure Capital",
-    title: "Vang Vieng",
-    subtitle: "Towering karst peaks mirror in jade-green waters where kayaks drift lazily past caves, rope swings, and riverside bungalows.",
-    accent: "from-teal-300 via-cyan-300 to-emerald-400",
-  },
-  {
-    image: "https://www.asiakingtravel.com/cuploads/files/Xaisomboun-province-4.jpg",
-    badge: "Hidden Highland",
-    title: "Xaisomboun",
-    subtitle: "Lost in the clouds above sea level — remote highland villages, ancient forests, and mountain passes where the world feels untouched.",
-    accent: "from-green-300 via-emerald-300 to-teal-400",
-  },
-];
-
+// Slide data — badges, titles, subtitles pulled from i18n using t()
+function getSlides(t: (key: string) => string) {
+  return [
+    {
+      image: "https://www.tourismlaos.org/wp-content/uploads/2022/03/76.%E0%BA%9B%E0%BA%B0%E0%BA%95%E0%BA%B9%E0%BB%84%E0%BA%8A%E0%BA%99%E0%BA%B0%E0%BA%84%E0%BA%AD%E0%BA%99%E0%BA%AB%E0%BA%A5%E0%BA%A7%E0%BA%87-copy-1030x773.jpg",
+      badge: t("home.slideshow.welcomeHome"),
+      title: t("home.slideshow.exploreLaos"),
+      subtitle: t("home.slideshow.subtitle1"),
+      accent: "from-red-300 via-rose-300 to-orange-400",
+    },
+    {
+      image: "https://www.journeyera.com/wp-content/uploads/2016/12/luang-prabang-photos-08807.jpg",
+      badge: t("home.slideshow.unesco"),
+      title: t("home.slideshow.luangPrabang"),
+      subtitle: t("home.slideshow.subtitle2"),
+      accent: "from-amber-300 via-yellow-300 to-orange-400",
+    },
+    {
+      image: "https://worldmatetravel.com/uploads/articles/best-places-to-visit-in-laos-countries-of-explorers-2802164807.jpg",
+      badge: t("home.slideshow.adventureCapital"),
+      title: t("home.slideshow.vangVieng"),
+      subtitle: t("home.slideshow.subtitle3"),
+      accent: "from-teal-300 via-cyan-300 to-emerald-400",
+    },
+    {
+      image: "https://www.asiakingtravel.com/cuploads/files/Xaisomboun-province-4.jpg",
+      badge: t("home.slideshow.hiddenHighland"),
+      title: t("home.slideshow.xaisomboun"),
+      subtitle: t("home.slideshow.subtitle4"),
+      accent: "from-green-300 via-emerald-300 to-teal-400",
+    },
+  ];
+}
 const R2_IMAGE_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE;
 
 // Format the discount label for a promotion card
@@ -71,7 +74,7 @@ function daysRemaining(dEnd: string | null): number | null {
 }
 
 export default function Home() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     attractions = [],
     types = [],
@@ -92,13 +95,16 @@ export default function Home() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  // Build slide data from i18n
+  const slides = useMemo(() => getSlides(t), [t, i18n.language]);
+
   // Slideshow timer
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 10000);
     return () => clearInterval(timer);
-  }, []);
+  }, [slides.length]);
 
   // Fetch promotions once on mount
   useEffect(() => {
@@ -106,7 +112,7 @@ export default function Home() {
   }, []);
 
   const goToSlide = (index: number) => setCurrentSlide(index);
-  const slide = SLIDES[currentSlide];
+  const slide = slides[currentSlide];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -202,26 +208,25 @@ export default function Home() {
           </motion.div>
 
           <div className="mt-10 flex items-center justify-center gap-2">
-            {SLIDES.map((_, i) => (
+            {slides.map((_: unknown, i: number) => (
               <button
                 key={i}
                 onClick={() => goToSlide(i)}
                 aria-label={`Go to slide ${i + 1}`}
-                className={`rounded-full transition-all duration-300 ${
-                  i === currentSlide ? "w-8 h-2 bg-white" : "w-2 h-2 bg-white/40 hover:bg-white/60"
-                }`}
+                className={`rounded-full transition-all duration-300 ${i === currentSlide ? "w-8 h-2 bg-white" : "w-2 h-2 bg-white/40 hover:bg-white/60"
+                  }`}
               />
             ))}
           </div>
         </div>
 
-        {/* <div className="absolute bottom-0 left-0 right-0 z-20 h-0.5 bg-white/10">
+        <div className="absolute bottom-0 left-0 right-0 z-20 h-0.5 bg-white/10">
           <div
             key={currentSlide}
             className="h-full bg-gradient-to-r from-teal-400 to-emerald-400"
             style={{ animation: "progress 10s linear forwards" }}
           />
-        </div> */}
+        </div>
 
         <style>{`
           @keyframes progress { from { width: 0% } to { width: 100% } }
@@ -239,7 +244,7 @@ export default function Home() {
             className="mb-12 text-center"
           >
             <span className="mb-3 inline-block rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-teal-600">
-              What to explore
+              {t("home.categories.badge", "What to explore")}
             </span>
             <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
               {t("home.categories.title", "Browse by Category")}
@@ -253,7 +258,7 @@ export default function Home() {
             {types.filter((c) => c.is_active).map((category, index) => {
               const IconComponent =
                 category.icon &&
-                (LucideIcons as unknown as Record<string, React.ElementType>)[category.icon]
+                  (LucideIcons as unknown as Record<string, React.ElementType>)[category.icon]
                   ? (LucideIcons as unknown as Record<string, React.ElementType>)[category.icon]
                   : Tag;
               const isHiddenMobile = index >= 6;
@@ -315,7 +320,7 @@ export default function Home() {
             >
               <div>
                 <span className="mb-2 inline-block rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-amber-600">
-                  Most Popular
+                  {t("home.featured.badge", "Most Popular")}
                 </span>
                 <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
                   {t("home.featured.title", "Top Rated Attractions")}
@@ -403,6 +408,112 @@ export default function Home() {
         </section>
       )}
 
+      {/* ===== ABOUT US BANNER ===== */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-emerald-500 py-20">
+        {/* Decorative blobs */}
+        <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 right-0 h-80 w-80 rounded-full bg-emerald-300/10 blur-3xl" />
+        {/* Subtle dot grid */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+          }}
+        />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center gap-10 lg:flex-row lg:items-center lg:justify-between">
+
+            {/* Left: copy */}
+            <motion.div
+              initial={{ opacity: 0, x: -24 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.65 }}
+              className="max-w-xl text-center lg:text-left"
+            >
+              <span className="mb-4 inline-block rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white/80 backdrop-blur-sm">
+                {t("home.about.ourStory", "Our Story")}
+              </span>
+              <h2 className="text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
+                {t("home.about.title", "Built by locals,")}<br />
+                <span className="text-emerald-200">{t("home.about.titleHighlight", "for every traveller.")}</span>
+              </h2>
+              <p className="mt-5 text-base leading-relaxed text-white/75 sm:text-lg">
+                {t("home.about.description", "LaoTMS was born from a simple idea — that Laos deserves a platform as rich and vibrant as the country itself. Three friends from Vientiane built it from the ground up to connect curious travellers with the hidden gems, local experiences, and authentic destinations that make Laos unforgettable.")}
+              </p>
+
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
+                <Link
+                  href="/about"
+                  className="group inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-bold text-teal-700 shadow-lg transition-all duration-300 hover:bg-emerald-50 hover:shadow-xl hover:shadow-black/20"
+                >
+                  {t("home.about.meetTeam", "Meet the Team")}
+                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                </Link>
+                <Link
+                  href="/attractions"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/10 px-7 py-3 text-sm font-semibold text-white backdrop-blur-sm transition-all duration-300 hover:bg-white/20"
+                >
+                  {t("home.about.exploreNow", "Explore Now")}
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* Right: team avatar stack */}
+            <motion.div
+              initial={{ opacity: 0, x: 24 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.65, delay: 0.15 }}
+              className="flex flex-col items-center gap-4"
+            >
+              {/* Avatars stacked with overlap */}
+              <div className="flex -space-x-4">
+                {[
+                  { image: yao, initials: 'YV', name: 'Yao VA', color: 'from-amber-400 to-orange-500' },
+                  { image: muelo, initials: 'MK', name: 'Muelo Korphea', color: 'from-violet-400 to-purple-600' },
+                  { image: numfon, initials: 'NK', name: 'Numfon Konlavong', color: 'from-pink-400 to-rose-500' },
+                ].map((member, i) => (
+                  <div
+                    key={i}
+                    title={member.name}
+                    className={`relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br ${member.color} ring-4 ring-teal-600 text-white text-xl font-bold shadow-lg sm:h-20 sm:w-20 sm:text-2xl overflow-hidden`}
+                  >
+                    {member.image ? (
+                      <Image
+                        src={member.image}
+                        alt={member.name}
+                        fill
+                        className="object-cover"
+                        priority
+                      />
+                    ) : (
+                      member.initials
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm font-medium text-white/70">3 friends · 1 mission · endless journeys</p>
+
+              {/* Mini stat pills */}
+              <div className="flex gap-3">
+                {[
+                  { value: `${attractions.length}+`, label: 'Attractions' },
+                  { value: '18', label: 'Provinces' },
+                ].map((s, i) => (
+                  <div key={i} className="rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-center backdrop-blur-sm">
+                    <p className="text-xl font-extrabold text-white">{s.value}</p>
+                    <p className="text-xs text-white/60">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* ===== PROMOTIONS ===== */}
       <section className="bg-gray-50 py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -467,8 +578,8 @@ export default function Home() {
                 const coverImage = promo.image
                   ? R2_IMAGE_URL + promo.image
                   : promo.thumbnailImage
-                  ? R2_IMAGE_URL + promo.thumbnailImage
-                  : 'https://images.pexels.com/photos/2166553/pexels-photo-2166553.jpeg?auto=compress&cs=tinysrgb&w=800';
+                    ? R2_IMAGE_URL + promo.thumbnailImage
+                    : 'https://images.pexels.com/photos/2166553/pexels-photo-2166553.jpeg?auto=compress&cs=tinysrgb&w=800';
 
                 return (
                   <motion.div
@@ -532,7 +643,7 @@ export default function Home() {
                             <div className="flex items-center gap-1 text-sm text-gray-700">
                               <Users className="h-3.5 w-3.5 text-gray-400" />
                               <span className="font-semibold text-gray-900">
-                                ฿{promo.adult.toLocaleString()}
+                                ${promo.adult.toLocaleString()}
                               </span>
                               <span className="text-gray-400 text-xs">/adult</span>
                             </div>
@@ -541,7 +652,7 @@ export default function Home() {
                             <div className="flex items-center gap-1 text-sm text-gray-700">
                               <span className="text-gray-400 text-xs">Child</span>
                               <span className="font-semibold text-gray-900">
-                                ฿{promo.children.toLocaleString()}
+                                ${promo.children.toLocaleString()}
                               </span>
                             </div>
                           )}

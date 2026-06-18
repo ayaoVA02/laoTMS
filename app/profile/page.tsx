@@ -188,10 +188,10 @@ export default function ProfilePage() {
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
             <User className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Sign in to view your profile</h2>
-          <p className="text-sm text-muted-foreground mb-6">Access your personalized profile, settings, and activity.</p>
+          <h2 className="text-xl font-bold mb-2">{t("profile.signInToView", "Sign in to view your profile")}</h2>
+          <p className="text-sm text-muted-foreground mb-6">{t("profile.signInDescription", "Access your personalized profile, settings, and activity.")}</p>
           <Button asChild className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white">
-            <a href="/auth/login">Sign In</a>
+            <a href="/auth/login">{t("profile.signIn", "Sign In")}</a>
           </Button>
         </motion.div>
       </div>
@@ -201,10 +201,10 @@ export default function ProfilePage() {
   const role = user?.role || "TOURIST";
 
   const stats = [
-    { label: "Travel Plans", value: plans.length, icon: FileText },
-    { label: "Favorites", value: favorites.length, icon: Heart },
-    { label: "Reviews", value: 4, icon: Star },
-    { label: "Notifications", value: unreadCount, icon: Bell },
+    { label: t("profile.myTravelPlans", "Travel Plans"), value: plans.length, icon: FileText },
+    { label: t("sidebar.favorites", "Favorites"), value: favorites.length, icon: Heart },
+    { label: t("sidebar.reviews", "Reviews"), value: 4, icon: Star },
+    { label: t("profile.notifications", "Notifications"), value: unreadCount, icon: Bell },
   ];
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

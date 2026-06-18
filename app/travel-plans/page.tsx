@@ -72,9 +72,8 @@ export default function TravelPlansPage() {
   if (!isAuthenticated) {
     return (
       <LoginRequired
-              title="Sign in to start your trip plan"
-              description="Sign in to create and manage your travel plans. Track your itineraries and save your favorite routes across Laos."
-           
+              title={t("loginRequired.title", "Sign in to start your trip plan")}
+              description={t("travelPlans.loginRequired", "Sign in to create and manage your travel plans. Track your itineraries and save your favorite routes across Laos.")}
               redirectTo="/travel-plans"
             />
     );

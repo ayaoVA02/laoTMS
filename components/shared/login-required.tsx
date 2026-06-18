@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Lock, ShieldCheck, UserPlus, LogIn } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 
 interface LoginRequiredProps {
   title?: string;
@@ -11,10 +12,12 @@ interface LoginRequiredProps {
 }
 
 export default function LoginRequired({
-  title = "Sign in to continue",
-  description = "This page is only available to registered users. Sign in or create a free account to access it.",
+  title,
+  description,
   redirectTo = "/dashboard",
 }: LoginRequiredProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-[60vh] flex items-center justify-center p-6">
       <motion.div
@@ -35,17 +38,17 @@ export default function LoginRequired({
 
         {/* Label */}
         <p className="text-[11px] font-medium tracking-widest text-muted-foreground uppercase mb-2">
-          Authentication required
+          {t("loginRequired.authRequired", "Authentication required")}
         </p>
 
         {/* Title */}
         <h2 className="text-2xl font-semibold text-foreground mb-3 leading-snug">
-          {title}
+          {title || t("loginRequired.title", "Sign in to continue")}
         </h2>
 
         {/* Description */}
         <p className="text-sm text-muted-foreground leading-relaxed mb-8 max-w-xs mx-auto">
-          {description}
+          {description || t("loginRequired.description", "This page is only available to registered users. Sign in or create a free account to access it.")}
         </p>
 
         {/* Buttons */}
@@ -55,14 +58,14 @@ export default function LoginRequired({
             className="inline-flex items-center gap-2 px-5 h-10 rounded-lg bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white text-sm font-medium transition-all shadow-sm shadow-teal-500/20"
           >
             <LogIn className="w-4 h-4" />
-            Sign in
+            {t("loginRequired.signIn", "Sign in")}
           </Link>
           <Link
             href="/auth/register"
             className="inline-flex items-center gap-2 px-5 h-10 rounded-lg border border-border bg-background hover:bg-muted text-foreground text-sm font-medium transition-all"
           >
             <UserPlus className="w-4 h-4" />
-            Create account
+            {t("loginRequired.createAccount", "Create account")}
           </Link>
         </div>
 
@@ -70,7 +73,7 @@ export default function LoginRequired({
         <div className="flex items-center justify-center gap-4 pt-5 border-t border-border flex-wrap">
           {(
             [
-            { icon: ShieldCheck, label: "Secure login" },
+            { icon: ShieldCheck, label: t("loginRequired.secureLogin", "Secure login") },
             { icon: (props: any) => (
               <svg className="w-3.5 h-3.5 text-teal-500" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -78,8 +81,8 @@ export default function LoginRequired({
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-            ), label: "Google supported" },
-            { icon: () => <span className="text-teal-500 text-xs">✦</span>, label: "Free to join" },
+            ), label: t("loginRequired.googleSupported", "Google supported") },
+            { icon: () => <span className="text-teal-500 text-xs">✦</span>, label: t("loginRequired.freeToJoin", "Free to join") },
             ] as Array<{ icon: React.ElementType; label: string }>
           ).map((item, i) => {
             const Icon = item.icon;

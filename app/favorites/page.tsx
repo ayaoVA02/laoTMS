@@ -47,8 +47,8 @@ export default function FavoritesPage() {
   if (!isAuthenticated) {
     return (
       <LoginRequired
-        title="Sign in to view favorites"
-        description="Save and revisit your favorite attractions across Laos."
+        title={t("loginRequired.title", "Sign in to view favorites")}
+        description={t("favorites.loginRequired", "Save and revisit your favorite attractions across Laos.")}
         redirectTo="/favorites"
       />
     );
@@ -85,9 +85,9 @@ export default function FavoritesPage() {
           <Card className="border-0 shadow-md">
             <CardContent className="py-12 text-center">
               <Heart className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground mb-4">No favorites yet</p>
+              <p className="text-sm text-muted-foreground mb-4">{t("favorites.empty", "No favorites yet")}</p>
               <Button asChild className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white">
-                <Link href="/attractions">Browse Attractions</Link>
+                <Link href="/attractions">{t("favorites.browseAttractions", "Browse Attractions")}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -131,7 +131,7 @@ export default function FavoritesPage() {
                     <span className="text-[10px] text-muted-foreground">({attraction.reviewCount})</span>
                   </div>
                   <Button asChild variant="outline" size="sm" className="w-full mt-3 text-xs border-teal-500/30 text-teal-600 hover:bg-teal-500/10">
-                    <Link href={`/attractions/${attraction.id}`}>View Details</Link>
+                    <Link href={`/attractions/${attraction.id}`}>{t("favorites.viewDetails", "View Details")}</Link>
                   </Button>
                 </CardContent>
               </Card>

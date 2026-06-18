@@ -227,7 +227,7 @@ export default function MapPage() {
             <div className="p-4 space-y-4">
               <div className="relative">
                 <Input
-                  placeholder="Search attractions..."
+                  placeholder={t("map.searchPlaceholder", "Search attractions...")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 h-9 text-sm"
