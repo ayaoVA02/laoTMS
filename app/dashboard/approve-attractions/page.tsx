@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { getR2Url } from "@/lib/upload";
-
+const IMAGE= process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
@@ -456,7 +456,7 @@ export default function ApproveAttractionsPage() {
                         >
                           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500/20 to-emerald-500/20 border border-teal-500/20 flex items-center justify-center shrink-0 overflow-hidden">
                             {a.thumbnail_image ? (
-                              <img src={getR2Url(a.thumbnail_image)} alt={a.name_en || ""} className="w-full h-full object-cover" />
+                              <img src={IMAGE+a.thumbnail_image} alt={a.name_en || ""} className="w-full h-full object-cover" />
                             ) : (
                               <Building2 className="w-4 h-4 text-teal-500" />
                             )}
@@ -564,7 +564,7 @@ export default function ApproveAttractionsPage() {
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {media.images.slice(0, 9).map((img) => (
                                   <div key={img} className="rounded-xl overflow-hidden border bg-muted aspect-[4/3] hover:opacity-90 transition-opacity">
-                                    <img src={getR2Url(img)} alt="" className="w-full h-full object-cover" />
+                                    <img src={IMAGE+img} alt="" className="w-full h-full object-cover" />
                                   </div>
                                 ))}
                               </div>
