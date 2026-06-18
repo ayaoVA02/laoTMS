@@ -28,4 +28,44 @@ export interface Attraction {
 
 }
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+export const PROVINCES = [
+  "Vientiane Capital", "Phongsali", "Luang Namtha", "Oudomxay", "Bokeo",
+  "Luang Prabang", "Huaphanh", "Xayabury", "Xieng Khouang", "Vientiane",
+  "Borikhamxay", "Khammouane", "Savannakhet", "Saravane", "Sekong",
+  "Champasack", "Attapeu", "Xaysomboun",
+];
+
+export const BEST_TIMES = [
+  "All year round",
+  "November to April (dry season)",
+  "May to October (green season)",
+  "December to February (cool season)",
+  "March to May (hot season)",
+];
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+export interface ImageItem {
+  id: string;
+  file: File;
+  previewUrl: string;
+  uploadedUrl: string | null;
+  uploading: boolean;
+  error: boolean;
+  isThumbnail: boolean;
+}
+
+export interface VideoItem {
+  id: string;
+  file: File;
+  previewUrl: string;
+  uploadedUrl: string | null;
+  uploading: boolean;
+  error: boolean;
+}
+
+export interface AttractionType {
+  type_id: string;
+  name_en: string;
+}
 
