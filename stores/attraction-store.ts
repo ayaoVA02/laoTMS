@@ -1,4 +1,4 @@
-import  { create } from 'zustand';
+import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -40,6 +40,28 @@ export interface Attraction {
   village: string;
   typeId: string;
   nameLa: string;
+  thumbnailImage: string;
+  isSixmonthOld: boolean;
+  expired: boolean;
+}
+
+export interface Promotion {
+  promotionId: string;
+  attractionId: string;
+  attractionName: string;
+  attractionLocation: string;
+  attractionProvince: string;
+  attractionRating: number;
+  title: string;
+  type: 'percentage' | 'fixed';
+  price: number;
+  dStart: string | null;
+  dEnd: string | null;
+  image: string;
+  children: number;
+  adult: number;
+  isActive: boolean;
+  usesCount: number;
   thumbnailImage: string;
 }
 
@@ -98,6 +120,8 @@ function mapAttraction(row: Record<string, unknown>, images: string[] = [], vide
     village: row.village as string || '',
     typeId: row.type_id as string || '',
     thumbnailImage: row.thumbnail_image as string || '',
+    isSixmonthOld: Boolean(row.is_sixmonth_old),
+    expired: Boolean(row.expired),
   };
 }
 
@@ -108,8 +132,10 @@ interface AttractionState {
   favorites: string[];
   searchQuery: string;
   selectedCategory: string;
-  types: { id: string; name_en: string; name_la: string; icon: string, is_active: boolean }[];
+  types: { id: string; name_en: string; name_la: string; icon: string; is_active: boolean }[];
   loading: boolean;
+  promotions: Promotion[];
+  promotionsLoading: boolean;
   setSelectedAttraction: (a: Attraction | null) => void;
   setSearchQuery: (q: string) => void;
   setSelectedCategory: (c: string) => void;
@@ -121,6 +147,7 @@ interface AttractionState {
   fetchFavorites: (userId: string) => Promise<void>;
   addFavorite: (userId: string, attractionId: string) => Promise<void>;
   removeFavorite: (userId: string, attractionId: string) => Promise<void>;
+  fetchPromotions: () => Promise<void>;
 }
 
 export const useAttractionStore = create<AttractionState>((set, get) => ({
@@ -132,6 +159,8 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
   selectedCategory: 'all',
   types: [],
   loading: false,
+  promotions: [],
+  promotionsLoading: false,
 
   setSelectedAttraction: (selectedAttraction) => set({ selectedAttraction }),
   setSearchQuery: (searchQuery) => {
@@ -146,7 +175,6 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
   toggleFavorite: async (id) => {
     const user = useAuthStore.getState().user;
     if (!user) return;
-
     const { favorites } = get();
     if (favorites.includes(id)) {
       await get().removeFavorite(user.id, id);
@@ -180,8 +208,9 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
       const { data: attractionRows, error } = await supabase
         .from('attractions')
         .select('*')
+        .eq('status', 'approved')
+        .eq('expired', false)
         .order('created_at', { ascending: false });
-
       if (error) { set({ loading: false }); return; }
 
       const { data: imageRows } = await supabase
@@ -205,8 +234,6 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
         videoMap[v.attraction_id].push(v.video_url);
       });
 
-      // Then pass to mapAttraction:
-
       const { data: entrepreneurRows } = await supabase
         .from('entrepreneurs')
         .select('user_id, first_name, last_name');
@@ -216,17 +243,11 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
         nameMap[e.user_id] = `${e.first_name} ${e.last_name}`.trim();
       });
 
-      // const mapped = (attractionRows || []).map((row) => {
-      //   const a = mapAttraction(row, imageMap[row.attraction_id] || []);
-      //   a.entrepreneurName = nameMap[row.user_id] || 'Unknown';
-      //   return a;
-      // });
-
       const mapped = (attractionRows || []).map((row) => {
         const a = mapAttraction(
           row,
           imageMap[row.attraction_id] || [],
-          videoMap[row.attraction_id] || []   // ← add this
+          videoMap[row.attraction_id] || []
         );
         a.entrepreneurName = nameMap[row.user_id] || 'Unknown';
         return a;
@@ -240,7 +261,6 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
 
   fetchSingleAttraction: async (attractionId: string) => {
     set({ loading: true });
-
     try {
       const { data: attractionRow, error } = await supabase
         .from('attractions')
@@ -249,7 +269,6 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
         .single();
 
       if (error || !attractionRow) {
-        console.error('Error fetching attraction rating:', error);
         set({ loading: false });
         return;
       }
@@ -262,7 +281,6 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
 
       const images = (imageRows || []).map((img) => img.image_url);
 
-
       const { data: videoRows } = await supabase
         .from('attraction_videos')
         .select('attraction_id, video_url')
@@ -274,35 +292,26 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
       set((state) => ({
         attractions: state.attractions.some((attraction) => attraction.id === attractionId)
           ? state.attractions.map((attraction) =>
-            attraction.id === attractionId
-              ? {
-                ...updatedAttraction,
-                entrepreneurName: attraction.entrepreneurName,
-              }
-              : attraction
-          )
+              attraction.id === attractionId
+                ? { ...updatedAttraction, entrepreneurName: attraction.entrepreneurName }
+                : attraction
+            )
           : [updatedAttraction, ...state.attractions],
         filteredAttractions: state.filteredAttractions.some((attraction) => attraction.id === attractionId)
           ? state.filteredAttractions.map((attraction) =>
-            attraction.id === attractionId
-              ? {
-                ...updatedAttraction,
-                entrepreneurName: attraction.entrepreneurName,
-              }
-              : attraction
-          )
+              attraction.id === attractionId
+                ? { ...updatedAttraction, entrepreneurName: attraction.entrepreneurName }
+                : attraction
+            )
           : [updatedAttraction, ...state.filteredAttractions],
         selectedAttraction:
           state.selectedAttraction?.id === attractionId
-            ? {
-              ...updatedAttraction,
-              entrepreneurName: state.selectedAttraction.entrepreneurName,
-            }
+            ? { ...updatedAttraction, entrepreneurName: state.selectedAttraction.entrepreneurName }
             : updatedAttraction,
         loading: false,
       }));
     } catch (err) {
-      console.error('Exception fetching attraction rating:', err);
+      console.error('Exception fetching attraction:', err);
       set({ loading: false });
     }
   },
@@ -310,10 +319,16 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
   fetchTypes: async () => {
     try {
       const { data } = await supabase.from('types').select('*').eq('is_active', true);
-
-      console.log("Fetched types:", data); // Debug: log fetched types
       if (data) {
-        set({ types: data.map((t) => ({ id: t.type_id, name_en: t.name_en, name_la: t.name_la, icon: t.type_icon, is_active: t.is_active })) });
+        set({
+          types: data.map((t) => ({
+            id: t.type_id,
+            name_en: t.name_en,
+            name_la: t.name_la,
+            icon: t.type_icon,
+            is_active: t.is_active,
+          })),
+        });
       }
     } catch { /* ignore */ }
   },
@@ -339,5 +354,70 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
       await supabase.from('favorites').delete().eq('user_id', userId).eq('attraction_id', attractionId);
       set((s) => ({ favorites: s.favorites.filter((f) => f !== attractionId) }));
     } catch { /* ignore */ }
+  },
+
+  fetchPromotions: async () => {
+    set({ promotionsLoading: true });
+    try {
+      // Fetch active promotions joined with their attraction data,
+      // sorted by uses_count descending (most popular first)
+      const { data, error } = await supabase
+        .from('promotions')
+        .select(`
+          promotion_id,
+          attraction_id,
+          title,
+          type,
+          price,
+          d_start,
+          d_end,
+          image,
+          children,
+          adult,
+          is_active,
+          uses_count,
+          attractions (
+            name_en,
+            location,
+            province,
+            rating,
+            thumbnail_image
+          )
+        `)
+        .eq('is_active', true)
+        .order('uses_count', { ascending: false });
+
+      if (error || !data) {
+        set({ promotionsLoading: false });
+        return;
+      }
+
+      const mapped: Promotion[] = data.map((row) => {
+        const attraction = (row.attractions as unknown) as Record<string, unknown> | null;
+        return {
+          promotionId: row.promotion_id,
+          attractionId: row.attraction_id,
+          attractionName: (attraction?.name_en as string) || '',
+          attractionLocation: (attraction?.location as string) || '',
+          attractionProvince: (attraction?.province as string) || '',
+          attractionRating: Number(attraction?.rating) || 0,
+          title: row.title,
+          type: (row.type as 'percentage' | 'fixed') || 'percentage',
+          price: Number(row.price) || 0,
+          dStart: row.d_start,
+          dEnd: row.d_end,
+          image: row.image || '',
+          children: Number(row.children) || 0,
+          adult: Number(row.adult) || 0,
+          isActive: Boolean(row.is_active),
+          usesCount: Number(row.uses_count) || 0,
+          thumbnailImage: (attraction?.thumbnail_image as string) || '',
+        };
+      });
+
+      set({ promotions: mapped, promotionsLoading: false });
+    } catch {
+      set({ promotionsLoading: false });
+    }
   },
 }));

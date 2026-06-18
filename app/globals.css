@@ -101,7 +101,9 @@
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
-
+body{
+  font-family: 'Inter', 'Noto Sans Lao', sans-serif;
+}
 .animate-shimmer {
   background: linear-gradient(90deg, transparent, rgba(20, 184, 166, 0.1), transparent);
   background-size: 200% 100%;

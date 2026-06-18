@@ -12,7 +12,7 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { reviews as sampleReviews } from "@/data/attractions";
+// import { reviews as sampleReviews } from "@/data/attractions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const containerVariants = {
@@ -107,7 +107,7 @@ export default function AdminDashboard({ attractionsCount }: AdminDashboardProps
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard title={t("dashboard.totalAttractions")} value={attractionsCount} change="+12%" up icon={Building2} accent="from-teal-500 to-emerald-600" />
         <StatCard title={t("dashboard.totalUsers")} value={191} change="+8%" up icon={Users} accent="from-sky-500 to-blue-600" />
-        <StatCard title={t("dashboard.totalReviews")} value={sampleReviews.length} change="+23%" up icon={Star} accent="from-amber-500 to-orange-600" />
+        {/* <StatCard title={t("dashboard.totalReviews")} value={sampleReviews.length} change="+23%" up icon={Star} accent="from-amber-500 to-orange-600" /> */}
         <StatCard title={t("dashboard.totalRevenue")} value="$24.5K" change="-3%" up={false} icon={BarChart3} accent="from-rose-500 to-pink-600" />
       </div>
 

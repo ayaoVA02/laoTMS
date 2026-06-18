@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import Image from "next/image";
+import LoginRequired from "@/components/shared/login-required";
 
 export default function TravelPlansPage() {
   const { t } = useTranslation();
@@ -67,36 +68,15 @@ export default function TravelPlansPage() {
 
   if (!mounted) return null;
 
+  
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center max-w-md"
-        >
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-white" />
-          </div>
-          <h2 className="text-xl font-bold mb-2">Login Required</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Sign in to create and manage your travel plans. Track your
-            itineraries and save your favorite routes across Laos.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="/auth/login" className="w-full sm:w-auto">
-              <button className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-gradient-to-r from-teal-500 to-emerald-600 text-white font-medium shadow-md shadow-teal-500/20 hover:shadow-lg transition-shadow">
-                Sign In
-              </button>
-            </a>
-            <a href="/auth/register" className="w-full sm:w-auto">
-              <button className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-teal-500/30 text-teal-600 font-medium hover:bg-teal-500/10 transition-colors">
-                Create Account
-              </button>
-            </a>
-          </div>
-        </motion.div>
-      </div>
+      <LoginRequired
+              title="Sign in to start your trip plan"
+              description="Sign in to create and manage your travel plans. Track your itineraries and save your favorite routes across Laos."
+           
+              redirectTo="/travel-plans"
+            />
     );
   }
 

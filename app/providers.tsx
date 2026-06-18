@@ -13,6 +13,8 @@ import { Toaster } from 'react-hot-toast'; // ✅ unified — matches create-att
 export function Providers({ children }: { children: React.ReactNode }) {
   const fetchAttractions = useAttractionStore((s) => s.fetchAttractions);
   const fetchTypes = useAttractionStore((s) => s.fetchTypes);
+  // const { fetchAttractions, fetchTypes, fetchPopularDestinations } = useAttractionStore();
+
   const hasInitialized = useRef(false);
 
   useEffect(() => {
@@ -22,6 +24,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
       fetchTypes();
     }
   }, []);
+
+  // useEffect(() => {
+  //   hasInitialized.current = true;
+  //   fetchAttractions().then(() => fetchPopularDestinations());
+  //   fetchTypes();
+  // }, []);
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
