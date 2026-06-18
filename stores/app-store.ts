@@ -16,12 +16,17 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  language: 'en',
+  language: 'en', // Always start as 'en' to match SSR — updated post-hydration
   sidebarOpen: false,
   viewMode: 'ROLE',
   touristTab: 'overview',
 
-  setLanguage: (language) => set({ language }),
+  setLanguage: (language) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('app-language', language);
+    }
+    set({ language });
+  },
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   setViewMode: (viewMode) => set({ viewMode }),

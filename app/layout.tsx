@@ -1,9 +1,14 @@
 // app/layout.tsx
 import './globals.css';
-import { Inter } from 'next/font/google';
+import { Inter, Noto_Sans_Lao } from 'next/font/google';
 import { Providers } from './providers';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const notoSansLao = Noto_Sans_Lao({
+  subsets: ['lao', 'latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-noto-sans-lao',
+});
 
 export const metadata = {
   title: 'LaoTMS',
@@ -18,8 +23,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      
-      <body className={inter.className}>
+      <body className={`${inter.variable} ${notoSansLao.variable} font-sans`} suppressHydrationWarning>
         <Providers>
           {children}
         </Providers>

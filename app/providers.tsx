@@ -8,11 +8,14 @@ import MobileTabBar from '@/components/layout/mobile-tab-bar';
 import AuthProvider from './auth-provider';
 import { useAttractionStore } from '@/stores/attraction-store';
 import { useEffect, useRef } from 'react';
-import { Toaster } from 'react-hot-toast'; // ✅ unified — matches create-attraction page
+import { Toaster } from 'react-hot-toast';
+import { FontProvider } from './font-provider';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const fetchAttractions = useAttractionStore((s) => s.fetchAttractions);
   const fetchTypes = useAttractionStore((s) => s.fetchTypes);
+  // const { fetchAttractions, fetchTypes, fetchPopularDestinations } = useAttractionStore();
+
   const hasInitialized = useRef(false);
 
   useEffect(() => {
@@ -23,18 +26,26 @@ export function Providers({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // useEffect(() => {
+  //   hasInitialized.current = true;
+  //   fetchAttractions().then(() => fetchPopularDestinations());
+  //   fetchTypes();
+  // }, []);
+
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <I18nextProvider i18n={i18n}>
-        {/* ✅ AuthProvider wraps everything so initAuth runs before any page renders */}
-        <AuthProvider>
-          <Toaster position="top-right" />
-          <Navbar />
-          <main className="min-h-screen pt-14 sm:pt-16 pb-16 md:pb-0">
-            {children}
-          </main>
-          <MobileTabBar />
-        </AuthProvider>
+        <FontProvider>
+          {/* ✅ AuthProvider wraps everything so initAuth runs before any page renders */}
+          <AuthProvider>
+            <Toaster position="top-right" />
+            <Navbar />
+            <main className="min-h-screen pt-14 sm:pt-16 pb-16 md:pb-0">
+              {children}
+            </main>
+            <MobileTabBar />
+          </AuthProvider>
+        </FontProvider>
       </I18nextProvider>
     </ThemeProvider>
   );

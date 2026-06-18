@@ -13,4 +13,11 @@ i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 });
 
+// Persist language changes to localStorage
+i18n.on('languageChanged', (lng) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('i18nextLng', lng);
+  }
+});
+
 export default i18n;

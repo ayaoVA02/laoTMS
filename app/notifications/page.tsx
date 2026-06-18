@@ -186,23 +186,23 @@ export default function NotificationsPage() {
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Push Notifications</p>
+                  <p className="text-sm font-medium">{t("notifications.pushNotifications", "Push Notifications")}</p>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    {pushEnabled ? "Receiving real-time push alerts" : "Enable to get real-time push alerts"}
+                    {pushEnabled ? t("notifications.pushEnabled", "Receiving real-time push alerts") : t("notifications.pushDisabled", "Enable to get real-time push alerts")}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {pushEnabled && fcmToken && (
-                  <Badge variant="outline" className="text-[9px] border-emerald-500/30 text-emerald-600">
-                    Connected
+                    <Badge variant="outline" className="text-[9px] border-emerald-500/30 text-emerald-600">
+                    {t("notifications.connected", "Connected")}
                   </Badge>
                 )}
                 {pushSupported ? (
                   <Switch checked={pushEnabled} onCheckedChange={handleTogglePush} />
                 ) : (
-                  <Badge variant="outline" className="text-[9px] border-slate-500/30 text-slate-500">
-                    Not Supported
+                    <Badge variant="outline" className="text-[9px] border-slate-500/30 text-slate-500">
+                    {t("notifications.notSupported", "Not Supported")}
                   </Badge>
                 )}
               </div>
