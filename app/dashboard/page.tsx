@@ -49,8 +49,9 @@ export default function DashboardPage() {
   const [socialShareStates, setSocialShareStates] = useState<Record<string, boolean>>({});
   const [myReviews, setMyReviews] = useState<ReviewItem[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [totalReviewsCount, setTotalReviewsCount] = useState(0); // ← new
 
-  // Load saved mode from localStorage on mount, sync to store
+  // Load saved mode from localStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined" && user?.id) {
       const savedMode = localStorage.getItem(`laotms_view_mode_${user.id}`);
@@ -64,23 +65,19 @@ export default function DashboardPage() {
   const handleViewModeChange = (mode: ViewMode) => {
     setLocalViewMode(mode);
     setViewMode(mode);
-    if (mode === "TOURIST") {
-      setTouristTab("overview");
-    }
+    if (mode === "TOURIST") setTouristTab("overview");
     if (typeof window !== "undefined" && user?.id) {
       localStorage.setItem(`laotms_view_mode_${user.id}`, mode);
     }
   };
 
-  // Fetch attraction data from Supabase
+  // Fetch attractions
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
 
     const fetchAttractions = async () => {
       let query = supabase.from("attractions").select("*");
-      if (role === "ENTREPRENEUR") {
-        query = query.eq("user_id", user.id);
-      }
+      if (role === "ENTREPRENEUR") query = query.eq("user_id", user.id);
       const { data, error } = await query.order("created_at", { ascending: false });
       if (error) {
         console.error("Error fetching attractions:", error);
@@ -97,6 +94,23 @@ export default function DashboardPage() {
     fetchAttractions();
   }, [isAuthenticated, user?.id, role]);
 
+  // Fetch total reviews count for admin dashboard
+  useEffect(() => {
+    if (!isAuthenticated || role !== "ADMIN") return;
+
+    const fetchReviewsCount = async () => {
+      const { count, error } = await supabase
+        .from("reviews")
+        .select("*", { count: "exact", head: true });
+      if (!error && count !== null) {
+        setTotalReviewsCount(count);
+      }
+    };
+
+    fetchReviewsCount();
+  }, [isAuthenticated, role]);
+
+  // Fetch my reviews for tourist view
   useEffect(() => {
     if (!isAuthenticated || !user?.id) {
       setMyReviews([]);
@@ -118,7 +132,9 @@ export default function DashboardPage() {
         return;
       }
 
-      const attractionIds = Array.from(new Set((reviewRows || []).map((r) => r.attraction_id)));
+      const attractionIds = Array.from(
+        new Set((reviewRows || []).map((r) => r.attraction_id))
+      );
       const attractionNames: Record<string, string> = {};
 
       if (attractionIds.length > 0) {
@@ -127,7 +143,9 @@ export default function DashboardPage() {
           .select("attraction_id, name_en")
           .in("attraction_id", attractionIds);
         if (aErr) console.error("Failed to fetch attraction names:", aErr);
-        (attractionRows || []).forEach((a) => { attractionNames[a.attraction_id] = a.name_en; });
+        (attractionRows || []).forEach((a) => {
+          attractionNames[a.attraction_id] = a.name_en;
+        });
       }
 
       setMyReviews(
@@ -175,23 +193,11 @@ export default function DashboardPage() {
   }
 
   const canSwitch = CAN_SWITCH.includes(role);
-
-  // ── KEY FIX 1 ──────────────────────────────────────────────────────────────
-  // TOURIST role never has a "ROLE" management view, so activeView is always
-  // "TOURIST" for them. For roles that CAN switch, respect localViewMode.
   const activeView: ViewMode = canSwitch ? localViewMode : "TOURIST";
-  // ──────────────────────────────────────────────────────────────────────────
 
-  // Only relevant when role === "ENTREPRENEUR" AND in management view
-  const myAttractions = role === "ENTREPRENEUR"
-    ? localAttractions
-    : [];
+  const myAttractions = role === "ENTREPRENEUR" ? localAttractions : [];
 
   const renderContent = () => {
-    // ── KEY FIX 2 ──────────────────────────────────────────────────────────
-    // Tourist view always renders TouristDashboard, regardless of role.
-    // This means ADMIN/STAFF/ENTREPRENEUR switching to "Traveler View" get the
-    // exact same dashboard a TOURIST user sees.
     if (activeView === "TOURIST") {
       return (
         <TouristDashboard
@@ -204,12 +210,15 @@ export default function DashboardPage() {
         />
       );
     }
-    // ────────────────────────────────────────────────────────────────────────
 
-    // Management views (only reachable when canSwitch === true)
     switch (role) {
       case "ADMIN":
-        return <AdminDashboard attractionsCount={localAttractions.length} />;
+        return (
+          <AdminDashboard
+            attractionsCount={localAttractions.length}
+            reviewsCount={totalReviewsCount} 
+          />
+        );
       case "STAFF":
         return <StaffDashboard />;
       case "ENTREPRENEUR":
@@ -264,7 +273,6 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0">
-                {/* Only roles that CAN switch see the toggle */}
                 {canSwitch && (
                   <div className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border shadow-sm">
                     <Button

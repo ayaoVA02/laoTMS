@@ -55,6 +55,7 @@ export default function TravelPlansPage() {
   const [newPlanStartDate, setNewPlanStartDate] = useState("");
   const [newPlanEndDate, setNewPlanEndDate] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const baseURLImage = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE;
 
   useEffect(() => {
     setMounted(true);
@@ -283,7 +284,7 @@ export default function TravelPlansPage() {
                                 className="relative h-10 w-10 rounded-full border-2 border-white overflow-hidden shadow-sm"
                               >
                                 <Image
-                                  src={attraction.images[0]}
+                                  src={baseURLImage+attraction.images[0]}
                                   alt={attraction.name}
                                   fill
                                   className="object-cover"

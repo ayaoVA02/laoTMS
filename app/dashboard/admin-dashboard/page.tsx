@@ -12,7 +12,6 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-// import { reviews as sampleReviews } from "@/data/attractions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const containerVariants = {
@@ -49,10 +48,10 @@ const recentActivityItems = [
 ];
 
 const roleDistribution = [
-  { role: "Admin", count: 3, color: "bg-red-500" },
-  { role: "Staff", count: 8, color: "bg-teal-500" },
-  { role: "Entrepreneur", count: 24, color: "bg-amber-500" },
-  { role: "Tourist", count: 156, color: "bg-sky-500" },
+  { role: "Admin",        count: 3,   color: "bg-red-500"   },
+  { role: "Staff",        count: 8,   color: "bg-teal-500"  },
+  { role: "Entrepreneur", count: 24,  color: "bg-amber-500" },
+  { role: "Tourist",      count: 156, color: "bg-sky-500"   },
 ];
 
 interface StatCardProps {
@@ -96,19 +95,48 @@ const StatCard = ({ title, value, change, up, icon: Icon, accent }: StatCardProp
 
 interface AdminDashboardProps {
   attractionsCount: number;
+  reviewsCount?: number;
 }
 
-export default function AdminDashboard({ attractionsCount }: AdminDashboardProps) {
+export default function AdminDashboard({ attractionsCount, reviewsCount = 0 }: AdminDashboardProps) {
   const { t } = useTranslation();
   const totalRoleUsers = roleDistribution.reduce((sum, r) => sum + r.count, 0);
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <StatCard title={t("dashboard.totalAttractions")} value={attractionsCount} change="+12%" up icon={Building2} accent="from-teal-500 to-emerald-600" />
-        <StatCard title={t("dashboard.totalUsers")} value={191} change="+8%" up icon={Users} accent="from-sky-500 to-blue-600" />
-        {/* <StatCard title={t("dashboard.totalReviews")} value={sampleReviews.length} change="+23%" up icon={Star} accent="from-amber-500 to-orange-600" /> */}
-        <StatCard title={t("dashboard.totalRevenue")} value="$24.5K" change="-3%" up={false} icon={BarChart3} accent="from-rose-500 to-pink-600" />
+        <StatCard
+          title={t("dashboard.totalAttractions")}
+          value={attractionsCount}
+          change="+12%"
+          up
+          icon={Building2}
+          accent="from-teal-500 to-emerald-600"
+        />
+        <StatCard
+          title={t("dashboard.totalUsers")}
+          value={191}
+          change="+8%"
+          up
+          icon={Users}
+          accent="from-sky-500 to-blue-600"
+        />
+        <StatCard
+          title={t("dashboard.totalReviews")}
+          value={reviewsCount}
+          change="+23%"
+          up
+          icon={Star}
+          accent="from-amber-500 to-orange-600"
+        />
+        <StatCard
+          title={t("dashboard.totalRevenue")}
+          value="$24.5K"
+          change="-3%"
+          up={false}
+          icon={BarChart3}
+          accent="from-rose-500 to-pink-600"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">

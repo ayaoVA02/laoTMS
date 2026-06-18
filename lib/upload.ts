@@ -35,3 +35,26 @@ export function getR2Url(key: string): string {
   // Otherwise combine with base URL
   return `${process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL}${key}`;
 }
+
+export function getRUrl(key: string): string {
+  if (!key) return '';
+  
+  // If it's already a full URL, return as is
+  if (key.startsWith('http')) return key;
+
+  // Clean up the key by removing any accidental leading slash
+  const cleanKey = key.startsWith('/') ? key.slice(1) : key;
+
+  // Determine which base URL to use based on the file type/extension
+  const isVideo = /\.(mp4|webm|mov|mkv|avi)$/i.test(cleanKey);
+  const baseUrl = isVideo
+    ? process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_VDO
+    : process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE;
+
+  if (!baseUrl) {
+    console.warn("[getR2Url] Missing Cloudflare R2 environment variable configuration.");
+    return cleanKey;
+  }
+
+  return `${baseUrl}${cleanKey}`;
+}

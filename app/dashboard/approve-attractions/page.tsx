@@ -10,7 +10,7 @@ import {
   Building2,
   Star,
   X,
-  Image as ImageIcon,
+  ImageIcon,
   Video,
   Navigation,
   RefreshCw,
@@ -22,13 +22,12 @@ import toast from "react-hot-toast";
 import DashboardLayout from "@/components/shared/dashboard-layout";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/auth-store";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { getR2Url } from "@/lib/upload";
-
+const IMAGE= process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
@@ -157,9 +156,10 @@ export default function ApproveAttractionsPage() {
       .filter((r) => {
         if (!q) return true;
         const name = (r.name_en || "").toLowerCase();
+        const nameLa = (r.name_la || "").toLowerCase();
         const location = (r.location || "").toLowerCase();
         const province = (r.province || "").toLowerCase();
-        return name.includes(q) || location.includes(q) || province.includes(q);
+        return name.includes(q) || nameLa.includes(q) || location.includes(q) || province.includes(q);
       });
   }, [rows, filterStatus, search]);
 
@@ -247,10 +247,71 @@ export default function ApproveAttractionsPage() {
 
   const updateStatus = async (id: string, status: "approved" | "rejected") => {
     try {
-      const { error } = await supabase.from("attractions").update({ status }).eq("attraction_id", id);
+      // Step 1: Update attraction status — pending → approved or rejected
+      const { error } = await supabase
+        .from("attractions")
+        .update({ status })
+        .eq("attraction_id", id);
       if (error) throw error;
-      setRows((prev) => prev.map((r) => (r.attraction_id === id ? { ...r, status } : r)));
-      toast.success(status === "approved" ? "Approved" : "Rejected");
+
+      // Step 2: Insert notification for the entrepreneur
+      const targetRow = rows.find((r) => r.attraction_id === id);
+      if (targetRow) {
+        const nameStr = targetRow.name_en || targetRow.name_la || "Your attraction submission";
+        await supabase.from("notifications").insert({
+          user_id: targetRow.user_id,
+          type: status === "approved" ? "approved" : "rejected",
+          title: status === "approved" ? "Submission Approved! 🎉" : "Submission Rejected",
+          message:
+            status === "approved"
+              ? `Your listing "${nameStr}" is now verified and active for public viewing.`
+              : `Your listing "${nameStr}" did not meet our verification standards.`,
+          read: false,
+          related_id: id,
+        });
+      }
+
+      // Step 3: If approved, check social row — only post to Facebook if facebook = true
+      if (status === "approved") {
+        try {
+          const { data: socialData } = await supabase
+            .from("social")
+            .select("s_id, facebook")
+            .eq("attraction_id", id)
+            .maybeSingle();
+
+          if (socialData?.s_id && socialData.facebook === true) {
+            // Both conditions met: status = approved AND facebook = true → post
+            toast.loading("Publishing to Facebook...", { id: "fb-sync" });
+
+            const fbRes = await fetch("/api/social/publish", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ s_id: socialData.s_id }),
+            });
+
+            const fbData = await fbRes.json();
+            if (fbRes.ok && fbData.success) {
+              toast.success("Approved and posted to Facebook!", { id: "fb-sync" });
+            } else {
+              toast.error(`Approved, but Facebook post failed: ${fbData.error}`, { id: "fb-sync" });
+            }
+          } else {
+            // facebook = false or no social row — approve only, no FB post needed
+            toast.success("Approved successfully");
+          }
+        } catch (fbErr: any) {
+          console.error("Facebook publish error:", fbErr);
+          toast.error("Approved, but Facebook sync failed.", { id: "fb-sync" });
+        }
+      } else {
+        toast.success("Rejected successfully");
+      }
+
+      // Step 4: Sync local UI state
+      setRows((prev) =>
+        prev.map((r) => (r.attraction_id === id ? { ...r, status } : r))
+      );
       if (selected?.attraction_id === id) {
         setSelected((p) => (p ? { ...p, status } : p));
       }
@@ -309,33 +370,38 @@ export default function ApproveAttractionsPage() {
   return (
     <DashboardLayout title={t("sidebar.approveAttractions")} subtitle="Review and approve submitted attractions">
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
-        {/* Status filters */}
+
+        {/* Status filter cards */}
         <div className="grid grid-cols-3 gap-3">
           {[
             { key: "pending" as const, label: "Pending", count: counts.pending, icon: Clock, color: "text-amber-500" },
             { key: "approved" as const, label: "Approved", count: counts.approved, icon: CheckCircle, color: "text-emerald-500" },
             { key: "rejected" as const, label: "Rejected", count: counts.rejected, icon: AlertTriangle, color: "text-red-500" },
-          ].map((s) => (
-            <motion.div key={s.key} variants={itemVariants}>
-              <Card
-                className={`border-0 shadow-md text-center cursor-pointer hover:shadow-lg transition-all ${
-                  filterStatus === s.key ? "ring-2 ring-teal-500 bg-teal-500/5" : ""
-                }`}
-                onClick={() => setFilterStatus(s.key)}
-              >
-                <CardContent className="p-3 sm:p-4">
-                  <s.icon className={`w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 ${s.color}`} />
-                  <p className="text-lg sm:text-2xl font-bold">{s.count}</p>
-                  <p className="text-[10px] sm:text-sm text-muted-foreground">{s.label}</p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+          ].map((s) => {
+            const IconComponent = s.icon;
+            return (
+              <motion.div key={s.key} variants={itemVariants}>
+                <Card
+                  className={`border-0 shadow-md text-center cursor-pointer hover:shadow-lg transition-all ${
+                    filterStatus === s.key ? "ring-2 ring-teal-500 bg-teal-500/5" : ""
+                  }`}
+                  onClick={() => setFilterStatus(s.key)}
+                >
+                  <CardContent className="p-3 sm:p-4">
+                    <IconComponent className={`w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 ${s.color}`} />
+                    <p className="text-lg sm:text-2xl font-bold">{s.count}</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">{s.label}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
         </div>
 
-        {/* Master-Detail Layout Panel */}
+        {/* Master-Detail layout */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 items-start">
-          {/* List Left Column */}
+
+          {/* Left: List */}
           <motion.div variants={itemVariants} className="lg:col-span-2 h-full">
             <Card className="border-0 shadow-md flex flex-col h-full min-h-[450px]">
               <CardHeader className="pb-3 border-b">
@@ -390,14 +456,14 @@ export default function ApproveAttractionsPage() {
                         >
                           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500/20 to-emerald-500/20 border border-teal-500/20 flex items-center justify-center shrink-0 overflow-hidden">
                             {a.thumbnail_image ? (
-                              <img src={getR2Url(a.thumbnail_image)} alt={a.name_en || ""} className="w-full h-full object-cover" />
+                              <img src={IMAGE+a.thumbnail_image} alt={a.name_en || ""} className="w-full h-full object-cover" />
                             ) : (
                               <Building2 className="w-4 h-4 text-teal-500" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-medium truncate max-w-[140px]">{a.name_en || "Untitled"}</p>
+                              <p className="text-sm font-medium truncate max-w-[140px]">{a.name_en || a.name_la || "Untitled"}</p>
                               <Badge variant="outline" className={`${statusBadge[String(a.status)] || ""} text-[9px] px-1 py-0`}>
                                 {String(a.status)}
                               </Badge>
@@ -430,7 +496,7 @@ export default function ApproveAttractionsPage() {
             </Card>
           </motion.div>
 
-          {/* Details Right Column */}
+          {/* Right: Detail */}
           <motion.div variants={itemVariants} className="lg:col-span-3 h-full">
             <Card className="border-0 shadow-md overflow-hidden min-h-[450px] flex flex-col">
               {selected ? (
@@ -439,14 +505,20 @@ export default function ApproveAttractionsPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <CardTitle className="text-base sm:text-lg font-semibold truncate">
-                          {selected.name_en || "Untitled"}
+                          {selected.name_en || selected.name_la || "Untitled"}
                         </CardTitle>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Submitted: {formatDate(selected.created_at)}{" "}
-                          {entrepreneurNameMap[selected.user_id] ? `• ${entrepreneurNameMap[selected.user_id]}` : ""}
+                          Submitted: {formatDate(selected.created_at)}
+                          {entrepreneurNameMap[selected.user_id] ? ` • ${entrepreneurNameMap[selected.user_id]}` : ""}
                         </p>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full shrink-0" onClick={() => setSelected(null)} title="Close">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full shrink-0"
+                        onClick={() => setSelected(null)}
+                        title="Close"
+                      >
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
@@ -467,13 +539,15 @@ export default function ApproveAttractionsPage() {
                   </CardHeader>
 
                   <CardContent className="p-4 sm:p-5 space-y-5 flex-1 overflow-y-auto">
-                    {/* Media Layout */}
+
+                    {/* Media */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Media Files</h4>
-                        {media.loading && <span className="text-[10px] text-muted-foreground animate-pulse">Loading files...</span>}
+                        {media.loading && (
+                          <span className="text-[10px] text-muted-foreground animate-pulse">Loading files...</span>
+                        )}
                       </div>
-
                       {media.images.length === 0 && media.videos.length === 0 ? (
                         <div className="p-6 rounded-xl bg-muted/30 border border-dashed text-center text-xs text-muted-foreground">
                           <ImageIcon className="w-6 h-6 mx-auto mb-2 text-muted-foreground/40" />
@@ -489,14 +563,13 @@ export default function ApproveAttractionsPage() {
                               </div>
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {media.images.slice(0, 9).map((img) => (
-                                  <div key={img} className="rounded-xl overflow-hidden border bg-muted aspect-[4/3] group relative hover:opacity-90 transition-opacity">
-                                    <img src={getR2Url(img)} alt="" className="w-full h-full object-cover" />
+                                  <div key={img} className="rounded-xl overflow-hidden border bg-muted aspect-[4/3] hover:opacity-90 transition-opacity">
+                                    <img src={IMAGE+img} alt="" className="w-full h-full object-cover" />
                                   </div>
                                 ))}
                               </div>
                             </div>
                           )}
-
                           {media.videos.length > 0 && (
                             <div>
                               <div className="flex items-center gap-1.5 text-xs font-medium mb-2 text-muted-foreground">
@@ -537,11 +610,11 @@ export default function ApproveAttractionsPage() {
                       <div className="p-3 rounded-xl bg-muted/40 border border-muted/20">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Operating Hours</p>
                         <p className="text-sm font-semibold mt-0.5">
-                          {String(selected.open_time || "08:00").substring(0, 5)} - {String(selected.close_time || "17:00").substring(0, 5)}
+                          {String(selected.open_time || "08:00").substring(0, 5)} – {String(selected.close_time || "17:00").substring(0, 5)}
                         </p>
                       </div>
                       <div className="p-3 rounded-xl bg-muted/40 border border-muted/20">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entry fee (Foreigner)</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Entry Fee (Foreigner)</p>
                         <p className="text-sm font-semibold mt-0.5 text-teal-600 dark:text-teal-400">
                           {selected.is_free_entry ? "Free Entry" : `${Number(selected.entry_fee_foreigner || 0).toLocaleString()} LAK`}
                         </p>
@@ -561,7 +634,7 @@ export default function ApproveAttractionsPage() {
                           size="sm"
                           variant="outline"
                           className="h-8 text-xs shrink-0 bg-background"
-                          onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${selected.latitude},${selected.longitude}`, "_blank")}
+                          onClick={() => window.open(`https://maps.google.com/?q=${selected.latitude},${selected.longitude}`, "_blank")}
                         >
                           <Navigation className="w-3.5 h-3.5 mr-1.5 text-teal-500" />
                           Open Map
@@ -583,7 +656,7 @@ export default function ApproveAttractionsPage() {
                       </div>
                     )}
 
-                    {/* Actions */}
+                    {/* Action buttons */}
                     <div className="flex items-center gap-3 pt-4 border-t mt-2">
                       <Button
                         className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
@@ -612,7 +685,7 @@ export default function ApproveAttractionsPage() {
                   </div>
                   <h3 className="text-sm font-medium text-foreground">Select an attraction to view details</h3>
                   <p className="text-xs text-muted-foreground mt-1 max-w-[240px]">
-                    Choose a item from the left pane queue. Default active filter is set to Pending.
+                    Choose an item from the left pane. Default filter is set to Pending.
                   </p>
                 </CardContent>
               )}
