@@ -1,28 +1,31 @@
 "use client";
 
 import { useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Star, FileText, Eye, MapPin, Map, Building2, Heart, Lock } from "lucide-react";
+import { motion, AnimatePresence, Variants } from "framer-motion";
+import { Star, FileText, Eye, MapPin, Map, Building2, Heart, Lock, Calendar, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAttractionStore } from "@/stores/attraction-store";
+import { useTravelPlanStore } from "@/stores/travel-plan-store"; 
 import Link from "next/link";
 import type { TouristTab } from "@/stores/app-store";
 
-const containerVariants = {
+const baseURLImage = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE;
+
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
+    transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] },
   },
 };
 
@@ -61,7 +64,7 @@ function OverviewTab({
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {[
-          { title: t("travelPlans.myPlans"), value: plansCount,      icon: FileText, accent: "from-teal-500 to-emerald-600"  },
+          { title: t("travelPlans.myPlans"), value: plansCount,       icon: FileText, accent: "from-teal-500 to-emerald-600"  },
           { title: t("sidebar.favorites", "Favorites"), value: favoritesCount, icon: Star, accent: "from-amber-500 to-orange-600" },
         ].map((stat) => (
           <motion.div key={stat.title} variants={itemVariants}>
@@ -119,9 +122,41 @@ function OverviewTab({
   );
 }
 
-// ─── My Plans Tab ─────────────────────────────────────────────────────────────
+// ─── My Plans Tab (History List with Details) ─────────────────────────
 
 function MyPlansTab() {
+  const { user, isAuthenticated } = useAuthStore();
+  const { plans = [], fetchPlans } = useTravelPlanStore();
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchPlans(user.id);
+    }
+  }, [isAuthenticated, user, fetchPlans]);
+
+  if (!isAuthenticated) {
+    return (
+      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
+        <motion.div variants={itemVariants}>
+          <Card className="border-0 shadow-md">
+            <CardContent className="py-12 text-center">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
+                <Lock className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-base font-semibold mb-1">Sign in to view travel history</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Access your past itineraries and upcoming saved schedules.
+              </p>
+              <Button asChild className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white">
+                <a href="/auth/login">Sign In</a>
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
       <motion.div variants={itemVariants}>
@@ -129,17 +164,59 @@ function MyPlansTab() {
           <CardHeader>
             <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
               <Map className="w-5 h-5 text-teal-500" />
-              My Travel Plans
+              Travel Plan History
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8">
-              <Map className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground mb-4">Manage your travel plans here.</p>
-              <Button asChild className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white">
-                <a href="/travel-plans">Go to Travel Plans</a>
-              </Button>
-            </div>
+            {plans.length === 0 ? (
+              <div className="text-center py-8">
+                <Map className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground mb-4">No travel plans yet.</p>
+                <Button asChild className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white">
+                  <Link href="/travel-plans">Create Your First Plan</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {plans.map((plan) => (
+                  <motion.div key={plan.id} variants={itemVariants}>
+                    <Link href={`/travel-plans/${plan.id}`}>
+                      <Card className="border shadow-sm hover:shadow-md transition-all cursor-pointer group hover:border-teal-500/30">
+                        <CardContent className="p-4 sm:p-5">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="p-2 rounded-xl bg-gradient-to-br from-teal-500/15 to-emerald-500/15">
+                              <Map className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" />
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-teal-500 transition-colors" />
+                          </div>
+                          
+                          <h3 className="text-sm sm:text-base font-semibold mb-1 truncate group-hover:text-teal-600 transition-colors">
+                            {plan.name}
+                          </h3>
+                          
+                          {plan.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
+                              {plan.description}
+                            </p>
+                          )}
+                          
+                          <div className="flex items-center gap-3 text-[10px] sm:text-xs text-muted-foreground border-t pt-3 mt-1">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-teal-500" />
+                              {plan.startDate}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-emerald-500" />
+                              {plan.attractionIds?.length || 0} stops
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -233,7 +310,7 @@ function FavoritesTab() {
                       <div className="relative aspect-[4/3] overflow-hidden">
                         {attraction.images?.[0] ? (
                           <Image
-                            src={attraction.images[0]}
+                            src={baseURLImage+attraction.images[0]}
                             alt={attraction.name}
                             fill
                             sizes="(max-width: 640px) 100vw, 50vw"

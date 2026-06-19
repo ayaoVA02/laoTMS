@@ -40,30 +40,120 @@ interface SidebarProps {
 
 const roleMenuItems: Record<UserRole, MenuItem[]> = {
   ADMIN: [
-    { href: "/dashboard", labelKey: "sidebar.overview", icon: LayoutDashboard, tabKey: "overview" },
-    { href: "/dashboard/analytics", labelKey: "sidebar.analytics", icon: BarChart3, tabKey: "overview" },
-    { href: "/dashboard/users", labelKey: "sidebar.users", icon: Users, tabKey: "overview" },
-    { href: "/dashboard/attractions", labelKey: "sidebar.attractions", icon: Building2, tabKey: "overview" },
-    { href: "/dashboard/settings", labelKey: "sidebar.settings", icon: Settings, tabKey: "overview" },
+    {
+      href: "/dashboard",
+      labelKey: "sidebar.overview",
+      icon: LayoutDashboard,
+      tabKey: "overview",
+    },
+    {
+      href: "/dashboard/analytics",
+      labelKey: "sidebar.analytics",
+      icon: BarChart3,
+      tabKey: "overview",
+    },
+    {
+      href: "/dashboard/users",
+      labelKey: "sidebar.users",
+      icon: Users,
+      tabKey: "overview",
+    },
+    {
+      href: "/dashboard/attractions",
+      labelKey: "sidebar.attractions",
+      icon: Building2,
+      tabKey: "overview",
+    },
+    {
+      href: "/dashboard/settings",
+      labelKey: "sidebar.settings",
+      icon: Settings,
+      tabKey: "overview",
+    },
   ],
   STAFF: [
-    { href: "/dashboard", labelKey: "sidebar.overview", icon: LayoutDashboard, tabKey: "overview" },
-    { href: "/dashboard/approve-attractions", labelKey: "sidebar.approveAttractions", icon: CheckSquare, tabKey: "overview" },
-    { href: "/dashboard/categories", labelKey: "sidebar.categories", icon: Tag, tabKey: "overview" },
-    { href: "/dashboard/notifications", labelKey: "sidebar.notifications", icon: Bell, tabKey: "overview" },
+    {
+      href: "/dashboard",
+      labelKey: "sidebar.overview",
+      icon: LayoutDashboard,
+      tabKey: "overview",
+    },
+    {
+      href: "/dashboard/approve-attractions",
+      labelKey: "sidebar.approveAttractions",
+      icon: CheckSquare,
+      tabKey: "overview",
+    },
+    {
+      href: "/dashboard/categories",
+      labelKey: "sidebar.categories",
+      icon: Tag,
+      tabKey: "overview",
+    },
+    {
+      href: "/dashboard/notifications",
+      labelKey: "sidebar.notifications",
+      icon: Bell,
+      tabKey: "overview",
+    },
   ],
   ENTREPRENEUR: [
-    { href: "/dashboard", labelKey: "sidebar.overview", icon: LayoutDashboard, tabKey: "overview" },
-    { href: "/dashboard/my-attractions", labelKey: "sidebar.myAttractions", icon: Building2, tabKey: "overview" },
-    { href: "/dashboard/create-attraction", labelKey: "sidebar.createAttraction", icon: Plus, tabKey: "overview" },
-    { href: "/dashboard/promotions", labelKey: "sidebar.promotions", icon: BarChart3, tabKey: "overview" },
-    { href: "/dashboard/notifications", labelKey: "sidebar.notifications", icon: Bell, tabKey: "overview" },
+    {
+      href: "/dashboard",
+      labelKey: "sidebar.overview",
+      icon: LayoutDashboard,
+      tabKey: "overview",
+    },
+    {
+      href: "/dashboard/my-attractions",
+      labelKey: "sidebar.myAttractions",
+      icon: Building2,
+      tabKey: "overview",
+    },
+    {
+      href: "/dashboard/create-attraction",
+      labelKey: "sidebar.createAttraction",
+      icon: Plus,
+      tabKey: "overview",
+    },
+    {
+      href: "/dashboard/promotions",
+      labelKey: "sidebar.promotions",
+      icon: BarChart3,
+      tabKey: "overview",
+    },
+    {
+      href: "/dashboard/notifications",
+      labelKey: "sidebar.notifications",
+      icon: Bell,
+      tabKey: "overview",
+    },
   ],
   TOURIST: [
-    { href: "/dashboard", labelKey: "sidebar.overview", icon: LayoutDashboard, tabKey: "overview" },
-    { href: "/dashboard/my-plans", labelKey: "sidebar.myPlans", icon: Map, tabKey: "my-plans" },
-    { href: "/dashboard/favorites", labelKey: "sidebar.favorites", icon: Building2, tabKey: "favorites" },
-    { href: "/dashboard/reviews", labelKey: "sidebar.reviews", icon: FileText, tabKey: "reviews" },
+    {
+      href: "/dashboard",
+      labelKey: "sidebar.overview",
+      icon: LayoutDashboard,
+      tabKey: "overview",
+    },
+    {
+      href: "/dashboard/my-plans",
+      labelKey: "sidebar.myPlans",
+      icon: Map,
+      tabKey: "my-plans",
+    },
+    {
+      href: "/dashboard/favorites",
+      labelKey: "sidebar.favorites",
+      icon: Building2,
+      tabKey: "favorites",
+    },
+    {
+      href: "/dashboard/reviews",
+      labelKey: "sidebar.reviews",
+      icon: FileText,
+      tabKey: "reviews",
+    },
   ],
 };
 
@@ -89,7 +179,13 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
   const pathname = usePathname();
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const { sidebarOpen, toggleSidebar, setSidebarOpen, touristTab, setTouristTab } = useAppStore();
+  const {
+    sidebarOpen,
+    toggleSidebar,
+    setSidebarOpen,
+    touristTab,
+    setTouristTab,
+  } = useAppStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -145,18 +241,19 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex items-center gap-2.5"
+                className="flex items-center gap-2"
               >
-                <div className="relative w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shrink-0 overflow-hidden">
+                <div className="flex items-center justify-center shrink-0">
                   <Image
                     src={logoLaoTMS}
                     alt="LaoTMS"
-                    fill
-                    className="object-contain p-1"
+                    width={40} // Increased from 32
+                    height={40} // Increased from 32
+                    className="object-contain"
                     priority
                   />
                 </div>
-                <span className="text-lg font-bold bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
+                <span className="text-base font-semibold tracking-wide bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
                   LaoTMS
                 </span>
               </motion.div>
@@ -168,12 +265,14 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
                 exit={{ opacity: 0 }}
                 className="flex items-center justify-center w-full"
               >
-                <div className="relative w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center overflow-hidden">
+                <div className="flex items-center justify-center shrink-0">
                   <Image
                     src={logoLaoTMS}
                     alt="LaoTMS"
-                    fill
-                    className="object-contain p-1"
+                    width={40} // Keeps the collapsed state matching and big
+                    height={40}
+                    className="object-contain"
+                    priority
                   />
                 </div>
               </motion.div>
@@ -199,10 +298,11 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
               ? touristTab === item.tabKey
               : pathname === item.href;
 
-            const sharedClassName = `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${isActive
+            const sharedClassName = `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+              isActive
                 ? "bg-teal-500/15 text-teal-400 shadow-sm shadow-teal-500/10"
                 : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
-              }`;
+            }`;
 
             const innerContent = (
               <>
@@ -279,7 +379,10 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
             onClick={toggleSidebar}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors"
           >
-            <motion.div animate={{ rotate: isCollapsed ? 0 : 180 }} transition={{ duration: 0.2 }}>
+            <motion.div
+              animate={{ rotate: isCollapsed ? 0 : 180 }}
+              transition={{ duration: 0.2 }}
+            >
               <ChevronRight className="w-4 h-4" />
             </motion.div>
             <motion.span
@@ -312,14 +415,15 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
                 {user?.name || "Guest"}
               </p>
               <span
-                className={`inline-flex items-center mt-0.5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md border ${viewMode === "TOURIST" && user?.role !== "TOURIST"
+                className={`inline-flex items-center mt-0.5 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md border ${
+                  viewMode === "TOURIST" && user?.role !== "TOURIST"
                     ? roleBadgeColors.TOURIST_VIEW
                     : roleBadgeColors[user?.role || "TOURIST"]
-                  }`}
+                }`}
               >
                 {viewMode === "TOURIST" && user?.role !== "TOURIST"
                   ? "Previewing Traveler"
-                  : (user?.role || "TOURIST")}
+                  : user?.role || "TOURIST"}
               </span>
             </motion.div>
           </div>

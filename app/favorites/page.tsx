@@ -30,6 +30,7 @@ export default function FavoritesPage() {
   const { favorites = [], attractions = [], toggleFavorite, fetchFavorites } = useAttractionStore();
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const baseURLImage = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE;
 
   useEffect(() => {
     setMounted(true);
@@ -98,7 +99,7 @@ export default function FavoritesPage() {
                 <div className="relative aspect-[4/3] overflow-hidden">
                   {attraction.images[0] ? (
                     <Image
-                      src={attraction.images[0]}
+                      src={baseURLImage+attraction.images[0]}
                       alt={attraction.name}
                       fill
                       sizes="(max-width: 1024px) 100vw, 33vw"

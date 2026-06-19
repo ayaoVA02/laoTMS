@@ -28,7 +28,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import dynamic from "next/dynamic";
 // @ts-ignore
 import "leaflet/dist/leaflet.css";
- const baseURLImage = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE;
+const baseURLImage = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE;
 
 const DynamicMap = dynamic(
   () =>
@@ -891,7 +891,7 @@ const formatTimeEstimate = (totalMinutes: number) => {
                                 {/* Thumbnail */}
                                 <div className="relative shrink-0 h-16 w-16 sm:h-20 sm:w-20 rounded-lg overflow-hidden">
                                   <Image
-                                    src={attraction.images[0]}
+                                    src={baseURLImage+attraction.images[0]}
                                     alt={attraction.name}
                                     fill
                                     className="object-cover group-hover:scale-105 transition-transform duration-300"

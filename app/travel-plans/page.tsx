@@ -37,6 +37,7 @@ import LoginRequired from "@/components/shared/login-required";
 
 export default function TravelPlansPage() {
   const { t } = useTranslation();
+  const baseURLImage = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE;
   const {
     plans = [],
     createPlan,
@@ -55,7 +56,6 @@ export default function TravelPlansPage() {
   const [newPlanStartDate, setNewPlanStartDate] = useState("");
   const [newPlanEndDate, setNewPlanEndDate] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const baseURLImage = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE;
 
   useEffect(() => {
     setMounted(true);
