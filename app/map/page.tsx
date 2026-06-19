@@ -55,6 +55,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 const LAOS_CENTER: [number, number] = [19.0, 103.0];
 
 export default function MapPage() {
+  const baseURLImage = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE;
   const { t } = useTranslation();
   const {
     filteredAttractions = [],
@@ -276,7 +277,7 @@ export default function MapPage() {
                       <div className="w-10 h-10 rounded-lg overflow-hidden relative">
                         {a.images[0] ? (
                           <Image
-                            src={a.images[0]}
+                            src={baseURLImage+a.images[0]}
                             alt={a.name}
                             fill
                             className="object-cover"

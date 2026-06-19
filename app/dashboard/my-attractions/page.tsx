@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Star, MapPin, Edit, Trash2, Share2, Plus,
   Clock, DollarSign, Wifi, Car, Utensils, BedDouble,
-  ChevronRight, RefreshCw, AlertCircle, Eye, ImageOff,
+  RefreshCw, AlertCircle, ImageOff,
   CheckCircle2, XCircle, Timer, FileEdit,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -17,10 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import {
-  Dialog, DialogContent, DialogHeader,
-  DialogTitle, DialogDescription, DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import toast from "react-hot-toast";
 import { Attraction } from "@/data/attractions";
 
@@ -76,6 +73,9 @@ function StatCard({ label, count, color, icon: Icon }: {
         </div>
         <p className={`text-2xl sm:text-3xl font-bold ${color.replace("bg-", "text-")}`}>{count}</p>
         <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{label}</p>
+
+
+        
       </CardContent>
     </Card>
   );
@@ -145,7 +145,7 @@ function AttractionCard({
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
         ) : (
-          <ImageOff className="w-6 h-6 text-teal-500/40" />
+         <ImageOff className="w-6 h-6 text-teal-500/40" />
         )}
       </div>
 
