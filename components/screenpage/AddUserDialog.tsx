@@ -1,12 +1,9 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import {
-    Camera, User, Phone, Globe, MapPin, Briefcase,
-    Loader2, Check, Mail, Shield, X, Search
+    User, Phone, Globe, MapPin, Shield, Loader2, Check, Mail, Search
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +19,11 @@ import {
 } from '@/components/ui/select';
 import toast from 'react-hot-toast';
 
-const R2_UPLOAD_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_URL;
+const APP_ROLES = [
+    { value: 'TOURIST', label: 'Tourist (Regular User)' },
+    { value: 'STAFF', label: 'Staff Member' },
+    { value: 'ADMIN', label: 'Administrator' },
+];
 
 const GENDERS = [
     { value: 'MALE', label: 'Male' },
@@ -42,20 +43,11 @@ const STAFF_STATUSES = [
     { value: 'suspended', label: 'Suspended' },
 ];
 
-async function uploadToR2(file: File): Promise<string> {
-    const ext = file.name.split('.').pop();
-    const key = `laotms/staff-${Date.now()}.${ext}`;
-    const res = await fetch(`${R2_UPLOAD_URL}/${key}`, {
-        method: 'PUT', headers: { 'Content-Type': file.type }, body: file,
-    });
-    if (!res.ok) throw new Error('Upload failed');
-    return `${R2_UPLOAD_URL}/${key}`;
-}
-
 interface Props {
     open: boolean;
     onOpenChange: (v: boolean) => void;
     onSuccess?: () => void;
+    staffUser?: any; 
 }
 
 function Field({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
@@ -69,10 +61,12 @@ function Field({ label, icon, children }: { label: string; icon: React.ReactNode
     );
 }
 
-export default function AddStaffDialog({ open, onOpenChange, onSuccess }: Props) {
-    const fileRef = useRef<HTMLInputElement>(null);
+export default function AddStaffDialog({ open, onOpenChange, onSuccess, staffUser }: Props) {
+    const isEditMode = !!staffUser;
+
     const [email, setEmail] = useState('');
-    const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null);
+    const [role, setRole] = useState('STAFF');
+    const [isVerified, setIsVerified] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
     
     const [firstName, setFirstName] = useState('');
@@ -80,162 +74,152 @@ export default function AddStaffDialog({ open, onOpenChange, onSuccess }: Props)
     const [phone, setPhone] = useState('');
     const [nationality, setNationality] = useState('');
     const [gender, setGender] = useState('MALE');
-    const [previewUrl, setPreviewUrl] = useState('');
-    const [profileImg, setProfileImg] = useState('');
-    const [uploading, setUploading] = useState(false);
-    const [staffCode, setStaffCode] = useState('');
     const [province, setProvince] = useState('');
     const [district, setDistrict] = useState('');
     const [village, setVillage] = useState('');
     const [status, setStatus] = useState('active');
     const [saving, setSaving] = useState(false);
 
-    const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setPreviewUrl(URL.createObjectURL(file));
-        setUploading(true);
-        try {
-            const url = await uploadToR2(file);
-            setProfileImg(url);
-            toast.success('Photo uploaded!');
-        } catch { toast.error('Upload failed'); setPreviewUrl(''); }
-        finally { setUploading(false); }
-    };
+    useEffect(() => {
+        if (open) {
+            if (staffUser) {
+                setEmail(staffUser.email || '');
+                setRole(staffUser.role || 'STAFF');
+                const nameParts = (staffUser.name || '').split(' ');
+                setFirstName(nameParts[0] || '');
+                setLastName(nameParts.slice(1).join(' ') || '');
+                setPhone(staffUser.phone || '');
+                setStatus(staffUser.staffStatus || 'active');
+                setProvince(staffUser.province || '');
+                setDistrict(staffUser.district || '');
+                setVillage(staffUser.village || '');
+                setGender(staffUser.gender || 'MALE');
+                setNationality(staffUser.nationality || '');
+                setIsVerified(true);
+            } else {
+                reset();
+            }
+        }
+    }, [open, staffUser]);
 
     const handleVerifyEmail = async () => {
-        if (!email.trim()) return;
+        if (!email.trim() || isEditMode) return;
         setIsVerifying(true);
-        setVerifiedUserId(null);
+        setIsVerified(false);
 
         try {
-            // 1. Check if user exists in the public users table
-            const { data: userAccount, error: userError } = await supabase
-                .from('users')
-                .select('id, first_name, last_name, role')
-                .eq('email', email.trim())
-                .maybeSingle();
+            const res = await fetch('/api/admin/users');
+            if (!res.ok) throw new Error('Failed to query system user index.');
+            
+            const data = await res.json();
+            const existingUser = data?.users?.find(
+                (u: any) => u.email.toLowerCase() === email.trim().toLowerCase()
+            );
 
-            if (userError) throw userError;
-
-            if (!userAccount) {
-                toast.error('No account found with this email.');
-                setIsVerifying(false);
-                return;
+            if (existingUser) {
+                setRole(existingUser.role || 'STAFF');
+                const nameParts = (existingUser.name || '').split(' ');
+                setFirstName(nameParts[0] || '');
+                setLastName(nameParts.slice(1).join(' ') || '');
+                if (existingUser.phone) setPhone(existingUser.phone);
+                
+                toast.success(`User located. Role auto-set to: ${existingUser.role}`);
+            } else {
+                toast.success('No existing account found. Creating new auth account credentials.');
             }
 
-            // 2. Check if they already have a staff record setup
-            const { data: staffProfile, error: staffError } = await supabase
-                .from('staffs')
-                .select('id')
-                .eq('user_id', userAccount.id)
-                .maybeSingle();
-
-            if (staffError) throw staffError;
-
-            if (staffProfile) {
-                toast.error('This user is already a registered staff member.');
-                setIsVerifying(false);
-                return;
-            }
-
-            // Auto-populate what we know and lock verification success
-            setVerifiedUserId(userAccount.id);
-            if (userAccount.first_name) setFirstName(userAccount.first_name);
-            if (userAccount.last_name) setLastName(userAccount.last_name);
-            toast.success('User verified! You can now complete the staff profile.');
-
+            setIsVerified(true);
         } catch (err: any) {
             console.error(err);
-            toast.error(err?.message ?? 'Verification failed.');
+            toast.error(err?.message || 'Verification pipeline error.');
         } finally {
             setIsVerifying(false);
         }
     };
 
     const reset = () => {
-        setEmail(''); setVerifiedUserId(null);
+        setEmail(''); setRole('STAFF'); setIsVerified(false);
         setFirstName(''); setLastName(''); setPhone('');
         setNationality(''); setGender('MALE');
-        setPreviewUrl(''); setProfileImg('');
-        setStaffCode(''); setProvince(''); setDistrict(''); setVillage(''); setStatus('active');
+        setProvince(''); setDistrict(''); setVillage(''); setStatus('active');
     };
 
     const handleClose = () => { reset(); onOpenChange(false); };
 
     const handleSave = async () => {
-        if (!verifiedUserId || !firstName.trim() || !lastName.trim()) return;
+        if (!isVerified) return;
+        if (role !== 'TOURIST' && (!firstName.trim() || !lastName.trim())) {
+            toast.error('First and Last names are mandatory for staff records.');
+            return;
+        }
 
         setSaving(true);
         try {
-            // 1. Update user role to STAFF
-            const { error: updateRoleError } = await supabase
-                .from('users')
-                .update({ role: 'STAFF' })
-                .eq('id', verifiedUserId);
-
-            if (updateRoleError) throw updateRoleError;
-
-            // 2. Create the staff record
-            const { error: profileError } = await supabase.from('staffs').insert({
-                user_id: verifiedUserId,
-                staff_code: staffCode || `STF-${Date.now()}`,
-                first_name: firstName,
-                last_name: lastName,
-                phone,
-                nationality,
-                gender,
-                profile_img: profileImg,
-                province,
-                district,
-                village,
-                status
+            const fullName = `${firstName.trim()} ${lastName.trim()}`;
+            
+            const response = await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: staffUser?.id || undefined,
+                    email: email.trim(),
+                    name: role === 'TOURIST' ? undefined : fullName,
+                    role: role,
+                    phone: role === 'TOURIST' ? undefined : phone.trim(),
+                    nationality: role === 'TOURIST' ? undefined : nationality.trim(),
+                    province: role === 'TOURIST' ? undefined : province,
+                    district: role === 'TOURIST' ? undefined : district.trim(),
+                    village: role === 'TOURIST' ? undefined : village.trim(),
+                    gender: role === 'TOURIST' ? undefined : gender,
+                    status: role === 'TOURIST' ? undefined : status
+                })
             });
 
-            if (profileError) throw profileError;
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Server rejected configuration change.');
 
-            toast.success('Staff profile created successfully!');
-            reset(); handleClose(); onSuccess?.();
+            toast.success(result.message || 'Permissions updated successfully!');
+            handleClose(); onSuccess?.();
         } catch (err: any) {
             console.error(err);
-            toast.error(err?.message ?? 'Failed to process staff profile creation.');
+            toast.error(err?.message || 'Failed to modify account permissions.');
         } finally { setSaving(false); }
     };
 
-    const isValid = verifiedUserId && firstName.trim() && lastName.trim();
+    const isTouristMode = role === 'TOURIST';
+    const isValid = isVerified && (isTouristMode || (firstName.trim() && lastName.trim()));
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
             <DialogContent className="p-0 gap-0 max-w-lg w-full overflow-hidden border-0 shadow-2xl bg-background rounded-xl flex flex-col max-h-[90vh]">
                 <DialogHeader className="sr-only">
-                    <DialogTitle>Add New Staff Member</DialogTitle>
+                    <DialogTitle>{isEditMode ? 'Manage User Permissions' : 'Assign System Access'}</DialogTitle>
                 </DialogHeader>
                 
-                {/* Header Container */}
                 <div className="relative h-24 bg-gradient-to-br from-teal-500 via-emerald-500 to-teal-700 overflow-hidden flex-shrink-0">
-                    <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/10" />
-                    <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-white/10" />
-                    
                     <div className="absolute inset-0 flex items-center justify-between px-6">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                                <User className="w-5 h-5 text-white" />
+                                <Shield className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <p className="text-white font-semibold text-base leading-tight">Add Staff Profile</p>
-                                <p className="text-white/70 text-xs mt-0.5">Verify email to convert an existing user account</p>
+                                <p className="text-white font-semibold text-base leading-tight">
+                                    {isEditMode ? 'Modify User Privilege' : 'Add System Identity'}
+                                </p>
+                                <p className="text-white/70 text-xs mt-0.5">
+                                    Configure core roles. Setting to Tourist wipes database staff table associations.
+                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Form Body - Scrollable Area */}
                 <div className="px-6 py-6 overflow-y-auto flex-1 custom-scrollbar">
                     <div className="space-y-6">
                         
-                        {/* Account Lookup Section */}
+                        {/* Account Verification Row */}
                         <div className="space-y-4">
-                            <p className="text-xs font-bold uppercase tracking-widest text-teal-600 dark:text-teal-400">Account Lookup</p>
+                            <p className="text-xs font-bold uppercase tracking-widest text-teal-600 dark:text-teal-400">Security Lookup</p>
                             <div className="flex items-end gap-2 w-full">
                                 <div className="flex-1">
                                     <Field label="User Email address" icon={<Mail className="w-3.5 h-3.5" />}>
@@ -243,124 +227,113 @@ export default function AddStaffDialog({ open, onOpenChange, onSuccess }: Props)
                                             type="email" 
                                             placeholder="user@laotms.la" 
                                             value={email} 
-                                            onChange={e => { setEmail(e.target.value); setVerifiedUserId(null); }} 
-                                            disabled={isVerifying || saving}
+                                            onChange={e => { setEmail(e.target.value); setIsVerified(false); }} 
+                                            disabled={isVerifying || saving || isEditMode}
                                             className="h-10 text-sm" 
                                         />
                                     </Field>
                                 </div>
-                                <Button
-                                    type="button"
-                                    onClick={handleVerifyEmail}
-                                    disabled={!email.trim() || isVerifying || !!verifiedUserId}
-                                    className={`h-10 px-4 shadow-sm font-medium transition-colors ${
-                                        verifiedUserId 
-                                        ? "bg-emerald-500 hover:bg-emerald-500 text-white cursor-default" 
-                                        : "bg-teal-600 hover:bg-teal-500 text-white"
-                                    }`}
-                                >
-                                    {isVerifying ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : verifiedUserId ? (
-                                        <Check className="w-4 h-4" />
-                                    ) : (
-                                        <Search className="w-4 h-4 mr-1.5" />
-                                    )}
-                                    {!isVerifying && !verifiedUserId && "Verify"}
-                                    {verifiedUserId && "Verified"}
-                                </Button>
+                                {!isEditMode && (
+                                    <Button
+                                        type="button"
+                                        onClick={handleVerifyEmail}
+                                        disabled={!email.trim() || isVerifying || isVerified}
+                                        className={`h-10 px-4 font-medium transition-colors ${
+                                            isVerified ? "bg-emerald-500 text-white cursor-default" : "bg-teal-600 text-white"
+                                        }`}
+                                    >
+                                        {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : isVerified ? <Check className="w-4 h-4" /> : <Search className="w-4 h-4 mr-1.5" />}
+                                        {!isVerifying && !isVerified && "Verify"}
+                                        {isVerified && "Verified"}
+                                    </Button>
+                                )}
                             </div>
                         </div>
 
-                        {/* Hidden/Disabled fields until email is verified */}
-                        <div className={`space-y-6 transition-all duration-300 ${verifiedUserId ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                            
-                            {/* Avatar Picker */}
-                            <div className="flex justify-center pb-2">
-                                <div className="relative">
-                                    <div className="w-20 h-20 rounded-2xl bg-muted border-2 border-border overflow-hidden flex items-center justify-center shadow-md">
-                                        {previewUrl ? <img src={previewUrl} alt="avatar" className="w-full h-full object-cover" /> : <User className="w-8 h-8 text-muted-foreground" />}
-                                        {uploading && <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-2xl"><Loader2 className="w-5 h-5 text-white animate-spin" /></div>}
-                                    </div>
-                                    <button type="button" disabled={!verifiedUserId} onClick={() => fileRef.current?.click()} className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-teal-500 hover:bg-teal-400 flex items-center justify-center shadow-md transition-colors">
-                                        <Camera className="w-3.5 h-3.5 text-white" />
-                                    </button>
-                                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-                                </div>
-                            </div>
+                        {/* Global App Role Selection */}
+                        <div className={`transition-opacity duration-200 ${isVerified ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                            <Field label="Global Account Role" icon={<Shield className="w-3.5 h-3.5" />}>
+                                <Select value={role} onValueChange={setRole} disabled={!isVerified || saving}>
+                                    <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {APP_ROLES.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+                            {isTouristMode && (
+                                <p className="text-amber-600 dark:text-amber-400 text-xs font-medium mt-2 bg-amber-500/10 border border-amber-500/20 rounded-md p-2">
+                                    ⚠️ Warning: Selecting Tourist will delete this profile row completely from the staffs database table when saved.
+                                </p>
+                            )}
+                        </div>
 
-                            {/* Personal Info Section */}
+                        {/* Staff Profiles Form */}
+                        <div className={`space-y-6 transition-all duration-300 ${isVerified && !isTouristMode ? 'opacity-100' : 'opacity-20 pointer-events-none'}`}>
+                            
                             <div className="space-y-4 pt-2">
                                 <p className="text-xs font-bold uppercase tracking-widest text-teal-600 dark:text-teal-400">Personal Info</p>
                                 <div className="grid grid-cols-2 gap-4">
                                     <Field label="First name" icon={<User className="w-3.5 h-3.5" />}>
-                                        <Input placeholder="Somchai" value={firstName} onChange={e => setFirstName(e.target.value)} disabled={!verifiedUserId} className="h-10 text-sm" />
+                                        <Input placeholder="Somchai" value={firstName} onChange={e => setFirstName(e.target.value)} disabled={!isVerified || isTouristMode} className="h-10 text-sm" />
                                     </Field>
                                     <Field label="Last name" icon={<User className="w-3.5 h-3.5" />}>
-                                        <Input placeholder="Vongvichit" value={lastName} onChange={e => setLastName(e.target.value)} disabled={!verifiedUserId} className="h-10 text-sm" />
+                                        <Input placeholder="Vongvichit" value={lastName} onChange={e => setLastName(e.target.value)} disabled={!isVerified || isTouristMode} className="h-10 text-sm" />
                                     </Field>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <Field label="Phone" icon={<Phone className="w-3.5 h-3.5" />}>
-                                        <Input placeholder="+856 20..." value={phone} onChange={e => setPhone(e.target.value)} disabled={!verifiedUserId} className="h-10 text-sm" />
+                                        <Input placeholder="+856 20..." value={phone} onChange={e => setPhone(e.target.value)} disabled={!isVerified || isTouristMode} className="h-10 text-sm" />
                                     </Field>
                                     <Field label="Gender" icon={<User className="w-3.5 h-3.5" />}>
-                                        <Select value={gender} onValueChange={setGender} disabled={!verifiedUserId}>
+                                        <Select value={gender} onValueChange={setGender} disabled={!isVerified || isTouristMode}>
                                             <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
                                             <SelectContent>{GENDERS.map(g => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}</SelectContent>
                                         </Select>
                                     </Field>
                                 </div>
                                 <Field label="Nationality" icon={<Globe className="w-3.5 h-3.5" />}>
-                                    <Input placeholder="Lao" value={nationality} onChange={e => setNationality(e.target.value)} disabled={!verifiedUserId} className="h-10 text-sm" />
+                                    <Input placeholder="Lao" value={nationality} onChange={e => setNationality(e.target.value)} disabled={!isVerified || isTouristMode} className="h-10 text-sm" />
                                 </Field>
                             </div>
 
-                            {/* Work & Location Section */}
                             <div className="space-y-4 pt-2">
                                 <p className="text-xs font-bold uppercase tracking-widest text-teal-600 dark:text-teal-400">Assignment Details</p>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Field label="Staff Code" icon={<Briefcase className="w-3.5 h-3.5" />}>
-                                        <Input placeholder="STF-001" value={staffCode} onChange={e => setStaffCode(e.target.value)} disabled={!verifiedUserId} className="h-10 text-sm" />
-                                    </Field>
-                                    <Field label="Status" icon={<Shield className="w-3.5 h-3.5" />}>
-                                        <Select value={status} onValueChange={setStatus} disabled={!verifiedUserId}>
-                                            <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
-                                            <SelectContent>{STAFF_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
-                                        </Select>
-                                    </Field>
-                                </div>
+                                
+                                <Field label="Status" icon={<Shield className="w-3.5 h-3.5" />}>
+                                    <Select value={status} onValueChange={setStatus} disabled={!isVerified || isTouristMode}>
+                                        <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
+                                        <SelectContent>{STAFF_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </Field>
+
                                 <Field label="Province" icon={<MapPin className="w-3.5 h-3.5" />}>
-                                    <Select value={province} onValueChange={setProvince} disabled={!verifiedUserId}>
+                                    <Select value={province} onValueChange={setProvince} disabled={!isVerified || isTouristMode}>
                                         <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Select province" /></SelectTrigger>
                                         <SelectContent className="max-h-52">{PROVINCES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </Field>
                                 <div className="grid grid-cols-2 gap-4">
                                     <Field label="District" icon={<MapPin className="w-3.5 h-3.5" />}>
-                                        <Input placeholder="District" value={district} onChange={e => setDistrict(e.target.value)} disabled={!verifiedUserId} className="h-10 text-sm" />
+                                        <Input placeholder="District" value={district} onChange={e => setDistrict(e.target.value)} disabled={!isVerified || isTouristMode} className="h-10 text-sm" />
                                     </Field>
                                     <Field label="Village" icon={<MapPin className="w-3.5 h-3.5" />}>
-                                        <Input placeholder="Village" value={village} onChange={e => setVillage(e.target.value)} disabled={!verifiedUserId} className="h-10 text-sm" />
+                                        <Input placeholder="Village" value={village} onChange={e => setVillage(e.target.value)} disabled={!isVerified || isTouristMode} className="h-10 text-sm" />
                                     </Field>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 </div>
 
-                {/* Footer Container */}
                 <div className="px-6 py-4 border-t border-border/50 flex gap-3 bg-muted/30 flex-shrink-0">
                     <Button type="button" variant="outline" className="flex-1 h-11" onClick={handleClose}>Cancel</Button>
                     <Button
                         type="button"
                         className="flex-1 h-11 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white font-semibold shadow-lg shadow-teal-500/20"
-                        disabled={!isValid || saving || uploading} onClick={handleSave}
+                        disabled={!isValid || saving} onClick={handleSave}
                     >
-                        {saving
-                            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</>
-                            : <><Check className="w-4 h-4 mr-2" />Register Staff</>
-                        }
+                        {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : <><Check className="w-4 h-4 mr-2" />Apply Changes</>}
                     </Button>
                 </div>
             </DialogContent>
