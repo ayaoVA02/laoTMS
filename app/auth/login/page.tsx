@@ -125,7 +125,8 @@ function LoginForm() {
                   <Label htmlFor="password" className="text-slate-700 dark:text-slate-300">
                     {t('auth.password', 'Password')}
                   </Label>
-                  <a href="#" className="text-sm text-teal-600 hover:text-teal-700 dark:text-teal-400 transition-colors">
+                  {/* CHANGED: Points directly to your forgot-password file setup */}
+                  <a href="/auth/forgot-password" className="text-sm text-teal-600 hover:text-teal-700 dark:text-teal-400 transition-colors font-medium">
                     {t('auth.forgotPassword', 'Forgot password?')}
                   </a>
                 </div>
@@ -185,7 +186,6 @@ function LoginForm() {
 export default function LoginPage() {
   const { t } = useTranslation();
 
-  
   console.log('LoginForm SCreen:');
   return (
     <div className="min-h-screen flex">
@@ -212,17 +212,11 @@ export default function LoginPage() {
               {t('auth.loginSubtitle', 'Discover the beauty of Laos. Manage attractions, plan trips, and explore the land of a million elephants.')}
             </p>
           </motion.div>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 0.8 }} className="mt-12 grid grid-cols-3 gap-8 text-center">
-            <div><div className="text-3xl font-bold text-white">500+</div><div className="text-sm text-teal-200">{t('auth.attractions', 'Attractions')}</div></div>
-            <div><div className="text-3xl font-bold text-white">10K+</div><div className="text-sm text-teal-200">{t('auth.tourists', 'Tourists')}</div></div>
-            <div><div className="text-3xl font-bold text-white">17</div><div className="text-sm text-teal-200">{t('auth.provinces', 'Provinces')}</div></div>
-          </motion.div>
         </div>
       </div>
 
       {/* Right form panel */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-white dark:bg-slate-950">
-        {/* Suspense needed because LoginForm calls useSearchParams() */}
         <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-teal-500" />}>
           <LoginForm />
         </Suspense>
