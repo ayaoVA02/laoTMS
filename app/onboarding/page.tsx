@@ -23,8 +23,8 @@ import { uploadToR2, getR2Url } from "@/lib/upload";
 
 // ─── Gender options ───────────────────────────────────────────────────────────
 const GENDERS = [
-  { value: 'MALE', label: 'Male' },
-  { value: 'FEMALE', label: 'Female' },
+  { value: 'MALE', labelEn: 'Male', labelLa: 'ຊາຍ' },
+  { value: 'FEMALE', labelEn: 'Female', labelLa: 'ຍິງ' },
 ];
 
 // ─── Avatar options ───────────────────────────────────────────────────────────
@@ -201,10 +201,10 @@ export default function OnboardingPage() {
       const key = await uploadToR2(file, 'profiles');
       setProfileImg(getR2Url(key)); // Store full URL in state
       setPreviewUrl(getR2Url(key));
-      toast.success('Photo uploaded!');
+      toast.success(t('onboarding.photoUploaded'));
     } catch (err) {
       console.error(err);
-      toast.error('Failed to upload photo');
+      toast.error(t('onboarding.photoFailed'));
       setPreviewUrl(profileImg ? getR2Url(profileImg) : '');
     } finally {
       setUploading(false);
@@ -240,7 +240,7 @@ export default function OnboardingPage() {
   const handleSave = async () => {
     if (!sessionUser) return;
     if (!validate()) {
-      toast.error('Please fill in all required fields');
+      toast.error(t('onboarding.fillRequired'));
       return;
     }
 
@@ -354,11 +354,11 @@ export default function OnboardingPage() {
         localStorage.removeItem('onboarding_form_data');
       }
 
-      toast.success('Profile saved! Welcome to LaoTMS 🎉');
+      toast.success(t('onboarding.profileSaved'));
       router.push('/dashboard');
     } catch (err) {
       console.error('Save error:', err);
-      toast.error('Failed to save profile. Please try again.');
+      toast.error(t('onboarding.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -366,8 +366,8 @@ export default function OnboardingPage() {
 
   // ── role badge ────────────────────────────────────────────────────────────────
   const roleBadge = isTourist
-    ? { icon: '🧳', label: 'Tourist', color: 'from-teal-500 to-cyan-500' }
-    : { icon: '🏢', label: 'Entrepreneur', color: 'from-emerald-500 to-green-500' };
+    ? { icon: '🧳', label: t('onboarding.tourist'), color: 'from-teal-500 to-cyan-500' }
+    : { icon: '🏢', label: t('onboarding.entrepreneur'), color: 'from-emerald-500 to-green-500' };
 
   // Fix: Show loader while loading, not after it finishes
   if (loadingSession) {
@@ -398,9 +398,9 @@ export default function OnboardingPage() {
             <span>{roleBadge.icon}</span>
             <span>{roleBadge.label}</span>
           </div>
-          <h1 className="text-3xl font-bold text-slate-950 dark:text-white mb-2">Set up your profile</h1>
+          <h1 className="text-3xl font-bold text-slate-950 dark:text-white mb-2">{t('onboarding.title')}</h1>
           <p className="text-slate-600 dark:text-slate-400 text-sm">
-            Tell us a bit about yourself to personalise your experience
+            {t('onboarding.subtitle')}
           </p>
         </div>
 
@@ -443,10 +443,10 @@ export default function OnboardingPage() {
             {/* Name row */}
             <div className="grid grid-cols-2 gap-4">
               <Field 
-                label={isEntrepreneur ? "Username (First Name)" : "First name"} 
+                label={isEntrepreneur ? t('onboarding.usernameFirstName') : t('onboarding.firstName')} 
                 icon={<User className="w-4 h-4" />} 
                 required 
-                error={errors.has('firstName') ? "Required" : undefined}
+                error={errors.has('firstName') ? t('onboarding.required') : undefined}
               >
                 <Input
                   placeholder="Somchai"
@@ -455,7 +455,7 @@ export default function OnboardingPage() {
                   className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${errors.has('firstName') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
                 />
               </Field>
-              <Field label="Last name" icon={<User className="w-4 h-4" />} required error={errors.has('lastName') ? "Required" : undefined}>
+              <Field label={t('onboarding.lastName')} icon={<User className="w-4 h-4" />} required error={errors.has('lastName') ? t('onboarding.required') : undefined}>
                 <Input
                   placeholder="Vongvichit"
                   value={lastName}
@@ -467,7 +467,7 @@ export default function OnboardingPage() {
 
 
             <div className="space-y-1.5 mb-6">
-              <Label className="text-slate-700 dark:text-slate-300 text-sm">I am a...</Label>
+              <Label className="text-slate-700 dark:text-slate-300 text-sm">{t('onboarding.iAmA')}</Label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setSelectedRole('TOURIST')}
@@ -477,8 +477,8 @@ export default function OnboardingPage() {
                     }`}
                 >
                   <div className="text-2xl mb-1">🧳</div>
-                  <div className="font-semibold text-slate-950 dark:text-white text-sm">Tourist</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">Explore Laos</div>
+                  <div className="font-semibold text-slate-950 dark:text-white text-sm">{t('onboarding.tourist')}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">{t('onboarding.exploreLaos')}</div>
                 </button>
 
                 <button
@@ -489,15 +489,15 @@ export default function OnboardingPage() {
                     }`}
                 >
                   <div className="text-2xl mb-1">🏢</div>
-                  <div className="font-semibold text-slate-950 dark:text-white text-sm">Entrepreneur</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">List attractions</div>
+                  <div className="font-semibold text-slate-950 dark:text-white text-sm">{t('onboarding.entrepreneur')}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">{t('onboarding.listAttractions')}</div>
                 </button>
               </div>
             </div>
 
             {/* Phone + Gender */}
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Phone" icon={<Phone className="w-4 h-4" />} required={isEntrepreneur} error={isEntrepreneur && errors.has('phone') ? "Required" : undefined}>
+              <Field label={t('onboarding.phone')} icon={<Phone className="w-4 h-4" />} required={isEntrepreneur} error={isEntrepreneur && errors.has('phone') ? t('onboarding.required') : undefined}>
                 <Input
                   placeholder="+856 20 XXXX XXXX"
                   value={phone}
@@ -505,7 +505,7 @@ export default function OnboardingPage() {
                   className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${isEntrepreneur && errors.has('phone') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
                 />
               </Field>
-              <Field label="Gender" icon={<User className="w-4 h-4" />}>
+              <Field label={t('onboarding.gender')} icon={<User className="w-4 h-4" />}>
                 <Select value={gender} onValueChange={setGender}>
                   <SelectTrigger className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white h-11">
                     <SelectValue />
@@ -513,7 +513,7 @@ export default function OnboardingPage() {
                   <SelectContent className="dark:bg-slate-900">
                     {GENDERS.map(g => (
                       <SelectItem key={g.value} value={g.value}>
-                        {g.label}
+                        {isLao ? g.labelLa : g.labelEn}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -522,9 +522,9 @@ export default function OnboardingPage() {
             </div>
 
             {/* Nationality */}
-            <Field label="Nationality" icon={<Globe className="w-4 h-4" />} required error={errors.has('nationality') ? "Required" : undefined}>
+            <Field label={t('onboarding.nationality')} icon={<Globe className="w-4 h-4" />} required error={errors.has('nationality') ? t('onboarding.required') : undefined}>
               <Input
-                placeholder="Lao"
+                placeholder={isLao ? "ລາວ" : "Lao"}
                 value={nationality}
                 onChange={e => { setNationality(e.target.value); if(errors.has('nationality')) setErrors(prev => { const n = new Set(prev); n.delete('nationality'); return n; }); }}
                 className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${errors.has('nationality') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
@@ -535,9 +535,9 @@ export default function OnboardingPage() {
             <AnimatePresence>
               {isTourist && (
                 <motion.div variants={fadeUp} initial="initial" animate="animate" exit="exit">
-                  <Field label="Travel preferences" icon={<Globe className="w-4 h-4" />} required error={errors.has('preferences') ? "Required" : undefined}>
+                  <Field label={t('onboarding.travelPreferences')} icon={<Globe className="w-4 h-4" />} required error={errors.has('preferences') ? t('onboarding.required') : undefined}>
                     <Input
-                      placeholder="e.g. nature, culture, food..."
+                      placeholder={t('onboarding.preferencesPlaceholder')}
                       value={preferences}
                       onChange={e => { setPreferences(e.target.value); if(errors.has('preferences')) setErrors(prev => { const n = new Set(prev); n.delete('preferences'); return n; }); }}
                       className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${errors.has('preferences') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
@@ -557,9 +557,9 @@ export default function OnboardingPage() {
                   exit="exit"
                   className="space-y-5"
                 >
-                  <Field label="Position / Job title" icon={<Briefcase className="w-4 h-4" />} required error={errors.has('position') ? "Required" : undefined}>
+                  <Field label={t('onboarding.position')} icon={<Briefcase className="w-4 h-4" />} required error={errors.has('position') ? t('onboarding.required') : undefined}>
                     <Input
-                      placeholder="e.g. Business Owner"
+                      placeholder={t('onboarding.positionPlaceholder')}
                       value={position}
                       onChange={e => { setPosition(e.target.value); if(errors.has('position')) setErrors(prev => { const n = new Set(prev); n.delete('position'); return n; }); }}
                       className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${errors.has('position') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
@@ -567,10 +567,10 @@ export default function OnboardingPage() {
                   </Field>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <Field label="Province" icon={<MapPin className="w-4 h-4" />} required error={errors.has('province') ? "Required" : undefined}>
+                    <Field label={t('onboarding.province')} icon={<MapPin className="w-4 h-4" />} required error={errors.has('province') ? t('onboarding.required') : undefined}>
                       <Select value={province} onValueChange={val => { setProvince(val); setDistrict(''); if(errors.has('province')) setErrors(prev => { const n = new Set(prev); n.delete('province'); return n; }); }}>
                         <SelectTrigger className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white h-11 ${errors.has('province') ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700'}`}>
-                          <SelectValue placeholder="Select province" />
+                          <SelectValue placeholder={t('onboarding.selectProvince')} />
                         </SelectTrigger>
                         <SelectContent className="max-h-60 dark:bg-slate-900">
                           {provinces.map(p => (
@@ -581,14 +581,14 @@ export default function OnboardingPage() {
                         </SelectContent>
                       </Select>
                     </Field>
-                    <Field label="District" icon={<MapPin className="w-4 h-4" />} required error={errors.has('district') ? "Required" : undefined}>
+                    <Field label={t('onboarding.district')} icon={<MapPin className="w-4 h-4" />} required error={errors.has('district') ? t('onboarding.required') : undefined}>
                       <Select 
                         value={district} 
                         onValueChange={val => { setDistrict(val); if(errors.has('district')) setErrors(prev => { const n = new Set(prev); n.delete('district'); return n; }); }}
                         disabled={!province}
                       >
                         <SelectTrigger className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white h-11 ${errors.has('district') ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700'}`}>
-                          <SelectValue placeholder="Select district" />
+                          <SelectValue placeholder={t('onboarding.selectDistrict')} />
                         </SelectTrigger>
                         <SelectContent className="max-h-60 dark:bg-slate-900">
                           {availableDistricts.map((d: any) => (
@@ -601,9 +601,9 @@ export default function OnboardingPage() {
                     </Field>
                   </div>
 
-                  <Field label="Village" icon={<MapPin className="w-4 h-4" />} required error={errors.has('village') ? "Required" : undefined}>
+                  <Field label={t('onboarding.village')} icon={<MapPin className="w-4 h-4" />} required error={errors.has('village') ? t('onboarding.required') : undefined}>
                     <Input
-                      placeholder="Village"
+                      placeholder={t('onboarding.village')}
                       value={village}
                       onChange={e => { setVillage(e.target.value); if(errors.has('village')) setErrors(prev => { const n = new Set(prev); n.delete('village'); return n; }); }}
                       className={`bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 h-11 ${errors.has('village') ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-teal-500'}`}
@@ -623,9 +623,9 @@ export default function OnboardingPage() {
               className="w-full h-12 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-lg shadow-teal-500/20 transition-all"
             >
               {saving ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t('onboarding.saving')}</>
               ) : (
-                <><Check className="w-4 h-4 mr-2" /> Complete profile<ChevronRight className="w-4 h-4 ml-1" /></>
+                <><Check className="w-4 h-4 mr-2" /> {t('onboarding.saveProfile')}<ChevronRight className="w-4 h-4 ml-1" /></>
               )}
             </Button>
           </div>

@@ -3,21 +3,14 @@ import { initReactI18next } from 'react-i18next';
 import en from '../locales/en.json';
 import la from '../locales/la.json';
 
-// Determine initial language: localStorage > 'la' as default
-let initialLng = 'la';
-if (typeof window !== 'undefined') {
-  const saved = localStorage.getItem('i18nextLng');
-  if (saved && (saved === 'en' || saved === 'la')) {
-    initialLng = saved;
-  }
-}
-
+// Always start with 'la' on both server and client to avoid hydration mismatch.
+// After hydration, the Providers component will read localStorage and switch if needed.
 i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
     la: { translation: la },
   },
-  lng: initialLng,
+  lng: 'la',
   fallbackLng: 'en',
   interpolation: { escapeValue: false },
 });
