@@ -201,7 +201,7 @@ export default function Sidebar({ viewMode = "ROLE" }: SidebarProps) {
 
   const menuItems = useMemo(() => {
     if (!user || viewMode === "TOURIST") return roleMenuItems.TOURIST;
-    return roleMenuItems[user.role];
+    return roleMenuItems[user.role ?? "TOURIST"];
   }, [user, viewMode]);
 
   const isCollapsed = !sidebarOpen;

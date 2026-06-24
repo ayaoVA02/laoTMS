@@ -245,7 +245,50 @@
     "createPromotion": "Create Promotion",
     "approvalStatus": "Approval Status",
     "socialShare": "Auto Social Share",
-    "enableSocialShare": "Enable automatic social media posting"
+    "enableSocialShare": "Enable automatic social media posting",
+    "welcomeBack": "Welcome back",
+    "management": "Management",
+    "travelerView": "Traveler View",
+    "simulatingTraveler": "You are currently simulating the traveler platform workspace experience.",
+    "returnToManagement": "Return to Management",
+    "quickActions": "Quick Actions",
+    "browse": "Browse",
+    "plan": "Plan",
+    "signInToViewHistory": "Sign in to view travel history",
+    "accessHistoryDesc": "Access your past itineraries and upcoming saved schedules.",
+    "travelPlanHistory": "Travel Plan History",
+    "noTravelPlansYet": "No travel plans yet.",
+    "createFirstPlan": "Create Your First Plan",
+    "signInToViewFavorites": "Sign in to view favorites",
+    "accessFavoritesDesc": "Save attractions and access them from your dashboard.",
+    "savedAttractions": "Saved Attractions",
+    "myFavorites": "My Favorites",
+    "noFavoritesYet": "No favorites saved yet.",
+    "browseAttractions": "Browse Attractions",
+    "myReviews": "My Reviews",
+    "loadingReviews": "Loading your reviews...",
+    "noReviewsYet": "You have not written any reviews yet.",
+    "stops": "stops",
+    "systemManagement": "System Management",
+    "systemManagementDesc": "Monitor statistics and map system access levels.",
+    "vsLastMonth": "vs last month",
+    "verifyingCredentials": "Verifying credentials...",
+    "accessDenied": "Access Denied",
+    "accessDeniedDesc": "You do not have administrative clearance to access this platform module.",
+    "userDistribution": "User Distribution by Role",
+    "approved": "Approved",
+    "pending": "Pending",
+    "rejected": "Rejected",
+    "addAttraction": "Add Attraction",
+    "topRatedAttractions": "Top Rated Attractions",
+    "recentPromotions": "Recent Promotions",
+    "noPromotions": "No promotions found.",
+    "attractionsOlder6Months": "Attractions Older Than 6 Months",
+    "attractionsNeedUpdate": "These attractions may need updates or fresh promotions to stay relevant.",
+    "allReviewed": "All attractions have been reviewed",
+    "recentSubmissions": "Recent Submissions",
+    "noSubmissions": "No submissions yet",
+    "loading": "Loading…"
   },
   "auth": {
     "loginTitle": "Welcome Back",
@@ -452,11 +495,48 @@
     "team": {
       "section": "The people behind it",
       "title": "Meet the team",
-      "subtitle": "Three builders from across Laos, united by one idea."
+      "subtitle": "Three builders from across Laos, united by one idea.",
+      "member1": {
+        "name": "Yao VA",
+        "role": "Full-Stack Developer & Co-Founder",
+        "bio": "Yao is the engine behind LaoTMS's architecture. With a passion for clean code and scalable systems, he designed the backend infrastructure, Supabase integrations, and the data pipelines that power the platform. When not debugging queries, he's on a mission to find the best khao piak sen the country has to offer.",
+        "highlights": ["Backend Architecture", "Supabase & Database", "API Design"],
+        "location": "Laos"
+      },
+      "member2": {
+        "name": "Muelo Korphea",
+        "role": "Frontend Developer & Co-Founder",
+        "bio": "Muelo turns ideas into pixels. He's the craftsman behind the interactive UI, the smooth animations, and the component systems that make LaoTMS feel alive. His philosophy: every screen should feel like a local guide handing you a hand-drawn map. Detail-obsessed and endlessly curious about new web technologies.",
+        "highlights": ["UI Engineering", "Animations & Motion", "Component Systems"],
+        "location": "Laos"
+      },
+      "member3": {
+        "name": "Numfon Konlavong",
+        "role": "Product & Content Lead · Co-Founder",
+        "bio": "Numfon is the voice and vision of LaoTMS. She shapes the product strategy, curates attraction content, and ensures every word on the platform reflects genuine Lao hospitality. A born explorer who has travelled across the country — and she'll happily tell you the best waterfall to swim in each province.",
+        "highlights": ["Product Strategy", "Content & Curation", "User Experience"],
+        "location": "Laos"
+      }
     },
     "values": {
       "section": "What guides us",
-      "title": "Our values"
+      "title": "Our values",
+      "value1": {
+        "title": "Local at heart",
+        "desc": "Every decision starts with one question: does this serve the people of Laos? We build for the communities that make this country extraordinary."
+      },
+      "value2": {
+        "title": "Authentic discovery",
+        "desc": "No paid rankings, no sponsored bias. Every attraction is listed on its own merits — because honest guidance builds lasting trust."
+      },
+      "value3": {
+        "title": "Quality over quantity",
+        "desc": "We'd rather surface 10 genuinely great experiences than 100 mediocre ones. Curation is our most important product."
+      },
+      "value4": {
+        "title": "Built with community",
+        "desc": "Entrepreneurs, guides, and travellers shape what LaoTMS becomes. The platform grows as the people who use it contribute."
+      }
     },
     "cta": {
       "title": "Ready to discover Laos?",

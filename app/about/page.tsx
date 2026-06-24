@@ -16,60 +16,63 @@ const TEAM = [
         initials: "YV",
         name: "Yao VA",
         image: yao,
-        role: "Full-Stack Developer & Co-Founder",
+        roleKey: "about.team.member1.role",
+        nameKey: "about.team.member1.name",
         color: "from-amber-400 to-orange-500",
         ring: "ring-amber-200",
-        bio: "Yao is the engine behind LaoTMS's architecture. With a passion for clean code and scalable systems, he designed the backend infrastructure, Supabase integrations, and the data pipelines that power the platform. When not debugging queries, he's on a mission to find the best khao piak sen the country has to offer.",
-        highlights: ["Backend Architecture", "Supabase & Database", "API Design"],
+        bioKey: "about.team.member1.bio",
+        highlights: ["about.team.member1.highlights.0", "about.team.member1.highlights.1", "about.team.member1.highlights.2"],
         icon: <Code2 className="h-5 w-5" />,
-        location: "Laos",
+        locationKey: "about.team.member1.location",
     },
     {
         initials: "MK",
         image: muelo,
         name: "Muelo Korphea",
-        role: "Frontend Developer & Co-Founder",
+        roleKey: "about.team.member2.role",
+        nameKey: "about.team.member2.name",
         color: "from-violet-400 to-purple-600",
         ring: "ring-violet-200",
-        bio: "Muelo turns ideas into pixels. He's the craftsman behind the interactive UI, the smooth animations, and the component systems that make LaoTMS feel alive. His philosophy: every screen should feel like a local guide handing you a hand-drawn map. Detail-obsessed and endlessly curious about new web technologies.",
-        highlights: ["UI Engineering", "Animations & Motion", "Component Systems"],
+        bioKey: "about.team.member2.bio",
+        highlights: ["about.team.member2.highlights.0", "about.team.member2.highlights.1", "about.team.member2.highlights.2"],
         icon: <Palette className="h-5 w-5" />,
-        location: "Laos",
+        locationKey: "about.team.member2.location",
     },
     {
         initials: "NK",
-        name: "Numfon Konlavong",
         image: numfon,
-        role: "Product & Content Lead · Co-Founder",
+        name: "Numfon Konlavong",
+        roleKey: "about.team.member3.role",
+        nameKey: "about.team.member3.name",
         color: "from-pink-400 to-rose-500",
         ring: "ring-rose-200",
-        bio: "Numfon is the voice and vision of LaoTMS. She shapes the product strategy, curates attraction content, and ensures every word on the platform reflects genuine Lao hospitality. A born explorer who has travelled across the country — and she'll happily tell you the best waterfall to swim in each province.",
-        highlights: ["Product Strategy", "Content & Curation", "User Experience"],
+        bioKey: "about.team.member3.bio",
+        highlights: ["about.team.member3.highlights.0", "about.team.member3.highlights.1", "about.team.member3.highlights.2"],
         icon: <Globe className="h-5 w-5" />,
-        location: "Laos",
+        locationKey: "about.team.member3.location",
     },
 ];
 
 const VALUES = [
     {
         icon: <Heart className="h-6 w-6 text-rose-500" />,
-        title: "Local at heart",
-        desc: "Every decision starts with one question: does this serve the people of Laos? We build for the communities that make this country extraordinary.",
+        titleKey: "about.values.value1.title",
+        descKey: "about.values.value1.desc",
     },
     {
         icon: <Mountain className="h-6 w-6 text-teal-500" />,
-        title: "Authentic discovery",
-        desc: "No paid rankings, no sponsored bias. Every attraction is listed on its own merits — because honest guidance builds lasting trust.",
+        titleKey: "about.values.value2.title",
+        descKey: "about.values.value2.desc",
     },
     {
         icon: <Star className="h-6 w-6 text-amber-500" />,
-        title: "Quality over quantity",
-        desc: "We'd rather surface 10 genuinely great experiences than 100 mediocre ones. Curation is our most important product.",
+        titleKey: "about.values.value3.title",
+        descKey: "about.values.value3.desc",
     },
     {
         icon: <Users className="h-6 w-6 text-violet-500" />,
-        title: "Built with community",
-        desc: "Entrepreneurs, guides, and travellers shape what LaoTMS becomes. The platform grows as the people who use it contribute.",
+        titleKey: "about.values.value4.title",
+        descKey: "about.values.value4.desc",
     },
 ];
 
@@ -223,26 +226,26 @@ export default function AboutPage() {
                                         )}
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-gray-900">{member.name}</h3>
-                                        <p className="text-sm text-gray-500">{member.role}</p>
+                                <h3 className="text-lg font-bold text-gray-900">{t(member.nameKey || member.name)}</h3>
+                                        <p className="text-sm text-gray-500">{t(member.roleKey)}</p>
                                         <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
                                             <MapPin className="h-3 w-3" />
-                                            {member.location}
+                                            {t(member.locationKey)}
                                         </p>
                                     </div>
                                 </div>
 
                                 {/* Bio */}
-                                <p className="flex-1 text-sm leading-relaxed text-gray-600">{member.bio}</p>
+                                <p className="flex-1 text-sm leading-relaxed text-gray-600">{t(member.bioKey)}</p>
 
                                 {/* Highlight pills */}
                                 <div className="mt-6 flex flex-wrap gap-2">
-                                    {member.highlights.map((tag) => (
+                                    {member.highlights.map((tag, i) => (
                                         <span
-                                            key={tag}
+                                            key={i}
                                             className="inline-flex items-center gap-1 rounded-full bg-gray-50 border border-gray-100 px-3 py-1 text-xs font-medium text-gray-600"
                                         >
-                                            {tag}
+                                            {t(tag)}
                                         </span>
                                     ))}
                                 </div>
@@ -271,7 +274,7 @@ export default function AboutPage() {
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                         {VALUES.map((v, index) => (
                             <motion.div
-                                key={v.title}
+                                key={v.titleKey}
                                 initial={{ opacity: 0, y: 20 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
@@ -281,8 +284,8 @@ export default function AboutPage() {
                                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm">
                                     {v.icon}
                                 </div>
-                                <h3 className="mb-2 text-base font-bold text-gray-900">{v.title}</h3>
-                                <p className="text-sm leading-relaxed text-gray-500">{v.desc}</p>
+                                <h3 className="mb-2 text-base font-bold text-gray-900">{t(v.titleKey)}</h3>
+                                <p className="text-sm leading-relaxed text-gray-500">{t(v.descKey)}</p>
                             </motion.div>
                         ))}
                     </div>

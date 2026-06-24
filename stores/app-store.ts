@@ -15,8 +15,18 @@ interface AppState {
   setTouristTab: (tab: TouristTab) => void;
 }
 
+function getInitialLanguage(): 'en' | 'la' {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('app-language');
+    if (saved === 'en' || saved === 'la') return saved;
+    const i18nLng = localStorage.getItem('i18nextLng');
+    if (i18nLng === 'en' || i18nLng === 'la') return i18nLng;
+  }
+  return 'la';
+}
+
 export const useAppStore = create<AppState>((set) => ({
-  language: 'en', // Always start as 'en' to match SSR — updated post-hydration
+  language: getInitialLanguage(),
   sidebarOpen: false,
   viewMode: 'ROLE',
   touristTab: 'overview',

@@ -44,6 +44,14 @@ export default function Navbar() {
   const { unreadCount } = useNotificationStore();
   const router = useRouter();
 
+  // Sync store language with i18n on mount
+  useEffect(() => {
+    const currentI18nLng = i18n.language as 'en' | 'la';
+    if (currentI18nLng !== language && (currentI18nLng === 'en' || currentI18nLng === 'la')) {
+      setLanguage(currentI18nLng);
+    }
+  }, []);
+
   // Bell destination: tourists (real role or preview mode) → /notifications
   // Staff/Admin/Entrepreneur in role view → /dashboard/notifications
   const role = user?.role ?? "TOURIST";
@@ -164,7 +172,7 @@ export default function Navbar() {
               >
                 <Globe className="w-4 h-4" />
                 <span className="text-xs font-semibold uppercase">
-                  {language}
+                  {i18n.language === 'la' ? 'LA' : 'EN'}
                 </span>
               </Button>
               <AnimatePresence>
@@ -177,26 +185,26 @@ export default function Navbar() {
                     className="absolute right-0 mt-1 w-28 rounded-xl border border-border/50 bg-background/95 backdrop-blur-xl shadow-lg shadow-black/10 overflow-hidden"
                   >
                     <button
+                      onClick={() => handleLanguageToggle("la")}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${
+                        i18n.language === "la"
+                          ? "text-teal-500 font-medium"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      <span className="text-base">LA</span>
+                      ລາວ
+                    </button>
+                    <button
                       onClick={() => handleLanguageToggle("en")}
                       className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${
-                        language === "en"
+                        i18n.language === "en"
                           ? "text-teal-500 font-medium"
                           : "text-muted-foreground"
                       }`}
                     >
                       <span className="text-base">GB</span>
                       English
-                    </button>
-                    <button
-                      onClick={() => handleLanguageToggle("la")}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-teal-500/10 ${
-                        language === "la"
-                          ? "text-teal-500 font-medium"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      <span className="text-base">LA</span>
-                      Lao
                     </button>
                   </motion.div>
                 )}
