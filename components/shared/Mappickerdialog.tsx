@@ -100,8 +100,8 @@ export default function MapPickerDialog({
         </DialogHeader>
 
         <div className="flex-1 relative bg-slate-100 min-h-0">
-          {/* Toggle Map Mode Control */}
-          <div className="absolute top-4 left-4 z-[1000]">
+          {/* Toggle Map Mode Control - Moved to top right */}
+          <div className="absolute top-4 right-12 z-[1000]">
             <Button
               type="button"
               size="sm"

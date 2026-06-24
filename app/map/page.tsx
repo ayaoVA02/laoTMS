@@ -414,7 +414,7 @@ export default function MapPage() {
             <div className="relative h-32 overflow-hidden">
               {selectedAttraction.images[0] ? (
                 <Image
-                  src={selectedAttraction.images[0]}
+                  src={baseURLImage+selectedAttraction.images[0]}
                   alt={selectedAttraction.name}
                   fill
                   className="object-cover"

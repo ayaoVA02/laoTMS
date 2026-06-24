@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, Search, Shield, MoreHorizontal, UserPlus,
-  RefreshCw, AlertCircle, Mail, Phone, Clock,
+  RefreshCw, AlertCircle, Mail, Clock,
   CheckCircle2, XCircle, Trash2, Ban,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -32,7 +32,7 @@ interface AdminUser {
   name: string;
   role: UserRole;
   avatar: string;
-  phone: string;
+  phone?: string; // Made optional to mirror conditional checks in UI securely
   isActive: boolean;
   provider: string;
   createdAt: string;
@@ -61,7 +61,7 @@ const ROLE_GRADIENT: Record<UserRole, string> = {
 const ALL_ROLES: UserRole[] = ["ADMIN", "STAFF", "ENTREPRENEUR", "TOURIST"];
 
 function initials(name: string) {
-  return name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase() || "?";
+  return name.split(" ").filter(Boolean).map(p => p[0]).join("").slice(0, 2).toUpperCase() || "?";
 }
 function fmtDate(iso: string | null) {
   if (!iso) return "—";
@@ -134,11 +134,7 @@ export default function UsersPage() {
     setLoading(true);
     setError(null);
     try {
-      console.log("test")
       const res = await fetch("/api/admin/users");
-
-      console.log("API ADMIN",res);
-
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -166,7 +162,7 @@ export default function UsersPage() {
       toast.error("Failed to update user");
     } else {
       toast.success(`User ${!current ? "activated" : "deactivated"}`);
-      loadUsers(); // Re-fetch all users to ensure state consistency
+      loadUsers();
     }
   };
 
@@ -182,17 +178,17 @@ export default function UsersPage() {
       toast.error("Failed to delete user");
     } else {
       setUsers(prev => prev.filter(u => u.id !== id));
-      loadUsers(); // Re-fetch all users to ensure state consistency
+      loadUsers();
       toast.success("User deleted");
     }
   };
 
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
-    const matchSearch   = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.phone.includes(q);
+    const matchSearch   = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.phone && u.phone.toLowerCase().includes(q));
     const matchRole     = filterRole === "all" || u.role === filterRole;
     const matchStatus   = filterStatus === "all" || (filterStatus === "active" ? u.isActive : !u.isActive);
-    const matchProvider = filterProvider === "all" || u.provider.includes(filterProvider);
+    const matchProvider = filterProvider === "all" || u.provider.toLowerCase().includes(filterProvider.toLowerCase());
     return matchSearch && matchRole && matchStatus && matchProvider;
   });
 
@@ -224,7 +220,7 @@ export default function UsersPage() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
           className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Total",      value: users.length,                          color: "text-foreground" },
+            { label: "Total",      value: users.length,                         color: "text-foreground" },
             { label: "Active",     value: users.filter(u => u.isActive).length,  color: "text-emerald-600" },
             { label: "Inactive",   value: users.filter(u => !u.isActive).length, color: "text-slate-500" },
             { label: "No profile", value: users.filter(u => !u.hasProfile).length, color: users.filter(u => !u.hasProfile).length > 0 ? "text-orange-500" : "text-muted-foreground" },
@@ -320,7 +316,7 @@ export default function UsersPage() {
 
               {!loading && !error && filtered.length > 0 && (
                 <>
-                  {/* Desktop */}
+                  {/* Desktop view */}
                   <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full">
                       <thead>
@@ -400,7 +396,7 @@ export default function UsersPage() {
                     </table>
                   </div>
 
-                  {/* Mobile */}
+                  {/* Mobile view */}
                   <div className="sm:hidden space-y-2">
                     <AnimatePresence mode="popLayout">
                       {filtered.map(u => (
