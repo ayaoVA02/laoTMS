@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, Globe, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -15,11 +15,10 @@ import { supabase } from '@/lib/supabase';
 const fadeInUp = { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5 } };
 const staggerContainer = { animate: { transition: { staggerChildren: 0.1 } } };
 
-// ── Inner form — reads searchParams ──────────────────────────────────────────
-function LoginForm() {
+// Unnested Form Component to fix Next.js 13 dynamic/lazy component mounting rules
+function LoginFormContent() {
   const { t } = useTranslation();
   const router = useRouter();
-
   const { login } = useAuthStore();
 
   const [email, setEmail] = useState('');
@@ -43,26 +42,18 @@ function LoginForm() {
     }
   };
 
-  console.log('process.env.NEXT_PUBLIC_SITE_URL', process.env.NEXT_PUBLIC_SITE_URL)
-
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-       options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-    },
+      options: {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      },
     });
     if (error) setError(error.message);
   };
 
-
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="initial"
-      animate="animate"
-      className="w-full max-w-md"
-    >
+    <motion.div variants={staggerContainer} initial="initial" animate="animate" className="w-full max-w-md">
       <motion.div variants={fadeInUp}>
         <Card className="border-0 shadow-none sm:border sm:shadow-sm bg-transparent sm:bg-card">
           <CardHeader className="space-y-1 px-0 sm:px-6">
@@ -75,7 +66,7 @@ function LoginForm() {
           </CardHeader>
 
           <CardContent className="px-0 sm:px-6">
-            {/* Google */}
+            {/* Google Login */}
             <Button
               variant="outline"
               className="w-full h-11 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 mb-4"
@@ -125,7 +116,6 @@ function LoginForm() {
                   <Label htmlFor="password" className="text-slate-700 dark:text-slate-300">
                     {t('auth.password', 'Password')}
                   </Label>
-                  {/* CHANGED: Points directly to your forgot-password file setup */}
                   <a href="/auth/forgot-password" className="text-sm text-teal-600 hover:text-teal-700 dark:text-teal-400 transition-colors font-medium">
                     {t('auth.forgotPassword', 'Forgot password?')}
                   </a>
@@ -162,10 +152,11 @@ function LoginForm() {
                 className="w-full h-11 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg shadow-teal-500/25"
                 disabled={isLoading}
               >
-                {isLoading
-                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Signing in...</>
-                  : t('auth.signIn', 'Sign in')
-                }
+                {isLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Signing in...</>
+                ) : (
+                  t('auth.signIn', 'Sign in')
+                )}
               </Button>
             </form>
 
@@ -182,11 +173,10 @@ function LoginForm() {
   );
 }
 
-// ── Page wrapper — decorative split layout ────────────────────────────────────
+// Main Page Component (Must always be default export)
 export default function LoginPage() {
   const { t } = useTranslation();
 
-  console.log('LoginForm SCreen:');
   return (
     <div className="min-h-screen flex">
       {/* Left decorative panel */}
@@ -206,7 +196,7 @@ export default function LoginPage() {
               <Globe className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-4xl font-bold text-white mb-4">
-              {t('auth.welcomeTo', 'Welcome to')} LaoTMS
+              Welcome to LaoTMS
             </h1>
             <p className="text-lg text-teal-100 max-w-md mx-auto leading-relaxed">
               {t('auth.loginSubtitle', 'Discover the beauty of Laos. Manage attractions, plan trips, and explore the land of a million elephants.')}
@@ -217,9 +207,8 @@ export default function LoginPage() {
 
       {/* Right form panel */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-white dark:bg-slate-950">
-        <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-teal-500" />}>
-          <LoginForm />
-        </Suspense>
+        {/* We keep the inner content component safe directly inside the document hierarchy */}
+        <LoginFormContent />
       </div>
     </div>
   );
