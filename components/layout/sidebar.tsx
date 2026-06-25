@@ -47,12 +47,6 @@ const roleMenuItems: Record<UserRole, MenuItem[]> = {
       tabKey: "overview",
     },
     {
-      href: "/dashboard/analytics",
-      labelKey: "sidebar.analytics",
-      icon: BarChart3,
-      tabKey: "overview",
-    },
-    {
       href: "/dashboard/users",
       labelKey: "sidebar.users",
       icon: Users,

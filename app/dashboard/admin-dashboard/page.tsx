@@ -86,6 +86,24 @@ interface ReviewQueryResult {
   } | null;
 }
 
+// Top attractions ranked by a real combined signal (reviews + favorites),
+// no fabricated change %.
+interface LiveAttraction {
+  attractionId: string;
+  name: string;
+  reviewCount: number;
+  favoriteCount: number;
+  combinedScore: number;
+}
+
+// Category breakdown grouped from attractions.type_id.
+interface LiveCategory {
+  category: string;
+  count: number;
+  pct: number;
+  color: string;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -95,6 +113,8 @@ const ROLE_DISPLAY: Record<string, { label: string; color: string; icon: React.E
   ENTREPRENEUR: { label: "Entrepreneur", color: "bg-amber-500", icon: Briefcase },
   TOURIST: { label: "Tourist", color: "bg-sky-500", icon: MapPin },
 };
+
+const CATEGORY_COLORS = ["bg-amber-500", "bg-emerald-500", "bg-sky-500", "bg-rose-500", "bg-orange-500", "bg-slate-400"];
 
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -166,6 +186,15 @@ export default function AdminDashboard({ attractionsCount, reviewsCount = 0 }: A
 
   const [liveAttractionsCount, setLiveAttractionsCount] = useState<number>(attractionsCount);
   const [liveReviewsCount, setLiveReviewsCount] = useState<number>(reviewsCount);
+
+  // Top attractions (reviews + favorites) and category breakdown — from code 1.
+  const [topAttractions, setTopAttractions] = useState<LiveAttraction[]>([]);
+  const [topAttractionsLoading, setTopAttractionsLoading] = useState(true);
+  const [topAttractionsError, setTopAttractionsError] = useState<string | null>(null);
+
+  const [categories, setCategories] = useState<LiveCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
   // Verify authorization permissions securely
   useEffect(() => {
@@ -288,8 +317,8 @@ export default function AdminDashboard({ attractionsCount, reviewsCount = 0 }: A
         seenReviewers.add(r.user_id);
 
         const attractionName = r.attractions?.name_en ? ` for ${r.attractions.name_en}` : "";
-        const reviewSnippet = r.content && r.content.trim() !== "" 
-          ? ` ("${r.content.slice(0, 20)}...")` 
+        const reviewSnippet = r.content && r.content.trim() !== ""
+          ? ` ("${r.content.slice(0, 20)}...")`
           : "";
 
         items.push({
@@ -321,13 +350,112 @@ export default function AdminDashboard({ attractionsCount, reviewsCount = 0 }: A
     setActivityLoading(false);
   }, []);
 
+  // Top attractions ranked by reviews + favorites (real combined signal,
+  // no fabricated multiplier). favorites has no per-attraction aggregate
+  // column, so counts are aggregated client-side from the raw rows.
+  const fetchTopAttractions = useCallback(async () => {
+    setTopAttractionsLoading(true);
+    setTopAttractionsError(null);
+
+    const [attractionsRes, favoritesRes] = await Promise.all([
+      supabase.from("attractions").select("attraction_id, review_count, name_en"),
+      supabase.from("favorites").select("attraction_id"),
+    ]);
+
+    if (attractionsRes.error || favoritesRes.error) {
+      const message = attractionsRes.error?.message || favoritesRes.error?.message || "Unknown error";
+      console.error("fetchTopAttractions error:", message);
+      setTopAttractionsError(message);
+      setTopAttractionsLoading(false);
+      return;
+    }
+
+    const attractionsData = attractionsRes.data ?? [];
+    const favoritesData = favoritesRes.data ?? [];
+
+    const favoriteCountByAttraction = new Map<string, number>();
+    for (const fav of favoritesData) {
+      if (!fav.attraction_id) continue;
+      favoriteCountByAttraction.set(
+        fav.attraction_id,
+        (favoriteCountByAttraction.get(fav.attraction_id) ?? 0) + 1
+      );
+    }
+
+    const ranked: LiveAttraction[] = attractionsData
+      .map((a) => {
+        const reviewCount = Number(a.review_count || 0);
+        const favoriteCount = favoriteCountByAttraction.get(a.attraction_id) ?? 0;
+        return {
+          attractionId: a.attraction_id,
+          name: a.name_en || "Unnamed Location",
+          reviewCount,
+          favoriteCount,
+          combinedScore: reviewCount + favoriteCount,
+        };
+      })
+      .sort((a, b) => b.combinedScore - a.combinedScore)
+      .slice(0, 5);
+
+    setTopAttractions(ranked);
+    setTopAttractionsLoading(false);
+  }, []);
+
+  // Category breakdown grouped from attractions.type_id.
+  const fetchCategories = useCallback(async () => {
+    setCategoriesLoading(true);
+    setCategoriesError(null);
+
+    const [attractionsRes, typesRes] = await Promise.all([
+      supabase.from("attractions").select("attraction_id, type_id"),
+      supabase.from("types").select("type_id, name_en"),
+    ]);
+
+    if (attractionsRes.error || typesRes.error) {
+      const message = attractionsRes.error?.message || typesRes.error?.message || "Unknown error";
+      console.error("fetchCategories error:", message);
+      setCategoriesError(message);
+      setCategoriesLoading(false);
+      return;
+    }
+
+    const attractionsData = attractionsRes.data ?? [];
+    const typesData = typesRes.data ?? [];
+    const totalAttractions = attractionsData.length;
+
+    const computed: LiveCategory[] = typesData
+      .map((type, index) => {
+        const matches = attractionsData.filter((a) => a.type_id === type.type_id).length;
+        return {
+          category: type.name_en || "Other",
+          count: matches,
+          pct: totalAttractions ? Math.round((matches / totalAttractions) * 100) : 0,
+          color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+
+    setCategories(computed);
+    setCategoriesLoading(false);
+  }, []);
+
   useEffect(() => {
     if (!isAdmin) return;
     fetchRoleCounts();
     fetchMonthlyAttractions();
     fetchLiveCounts();
     fetchRecentActivity();
-  }, [isAdmin, fetchRoleCounts, fetchMonthlyAttractions, fetchLiveCounts, fetchRecentActivity]);
+    fetchTopAttractions();
+    fetchCategories();
+  }, [
+    isAdmin,
+    fetchRoleCounts,
+    fetchMonthlyAttractions,
+    fetchLiveCounts,
+    fetchRecentActivity,
+    fetchTopAttractions,
+    fetchCategories,
+  ]);
 
   if (isAdmin === null) {
     return (
@@ -360,6 +488,7 @@ export default function AdminDashboard({ attractionsCount, reviewsCount = 0 }: A
 
   const totalRoleUsers = roleDistribution.reduce((sum, r) => sum + r.count, 0);
   const maxMonthlyValue = Math.max(1, ...monthlyData.map((d) => d.attraction_count));
+  const highestCombinedScore = topAttractions[0]?.combinedScore || 1;
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
@@ -471,6 +600,111 @@ export default function AdminDashboard({ attractionsCount, reviewsCount = 0 }: A
                   ))
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Top Attractions + Category Breakdown — merged in from the analytics page */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <motion.div variants={itemVariants}>
+          <Card className="border-0 shadow-md h-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-teal-500" />
+                Top Attractions
+                <span className="text-xs font-normal text-muted-foreground ml-1">— reviews + favorites</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {topAttractionsError ? (
+                <p className="text-sm text-red-500">Couldn&apos;t load top attractions: {topAttractionsError}</p>
+              ) : topAttractionsLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="h-3 w-5 rounded bg-muted animate-pulse" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-3 w-2/3 rounded bg-muted animate-pulse" />
+                        <div className="h-1.5 w-full rounded-full bg-muted animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {topAttractions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">No attraction activity found.</p>
+                  ) : (
+                    topAttractions.map((a, i) => (
+                      <div key={a.attractionId} className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-muted-foreground w-5">{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{a.name}</p>
+                          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-secondary mt-1">
+                            <div
+                              className="h-full bg-gradient-to-r from-teal-500 to-emerald-500"
+                              style={{ width: `${(a.combinedScore / highestCombinedScore) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold">{a.combinedScore.toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {a.reviewCount} reviews · {a.favoriteCount} saved
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="border-0 shadow-md h-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-teal-500" />
+                Category Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {categoriesError ? (
+                <p className="text-sm text-red-500">Couldn&apos;t load categories: {categoriesError}</p>
+              ) : categoriesLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <div className="h-3 w-1/2 rounded bg-muted animate-pulse" />
+                      <div className="h-2 w-full rounded-full bg-muted animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {categories.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">No categories mapped.</p>
+                  ) : (
+                    categories.map((c) => (
+                      <div key={c.category} className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2.5 h-2.5 rounded-full ${c.color}`} />
+                            <span className="text-sm font-medium">{c.category}</span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">{c.count} ({c.pct}%)</span>
+                        </div>
+                        <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                          <div className={`h-full ${c.color} transition-all`} style={{ width: `${c.pct}%` }} />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
