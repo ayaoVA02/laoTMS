@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Building2, Search, Star, MapPin, Eye, Edit, Trash2, MoreHorizontal } from "lucide-react";
+import { Building2, Search, Star, MapPin, Clock, CheckCircle, AlertTriangle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useAttractionStore } from "@/stores/attraction-store";
-import { useAuthStore } from "@/stores/auth-store";
+import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabase";
 import DashboardLayout from "@/components/shared/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useRouter } from "next/navigation";
+
+const baseURLImage = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE;
 
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.06 } } };
 const itemVariants = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
@@ -22,100 +22,204 @@ const statusBadge: Record<string, string> = {
   rejected: "bg-red-500/15 text-red-600 border-red-500/25",
 };
 
+type AttractionRow = {
+  attraction_id: string;
+  name_en: string | null;
+  name_la: string | null;
+  location: string | null;
+  province: string | null;
+  thumbnail_image: string | null;
+  rating: number | null;
+  status: "pending" | "approved" | "rejected" | string;
+};
+
 export default function DashboardAttractionsPage() {
   const { t } = useTranslation();
-  const { attractions = [] } = useAttractionStore();
-  const { isAuthenticated } = useAuthStore();
-  const router = useRouter();
+
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [rows, setRows] = useState<AttractionRow[]>([]);
 
-  useEffect(() => { setMounted(true); }, []);
+  // Ref attached to the status filter container
+  const filterAreaRef = useRef<HTMLDivElement>(null);
 
-  const localAttractions = attractions;
-  const filtered = localAttractions.filter((a) => {
-    const matchSearch = a.name.toLowerCase().includes(search.toLowerCase()) || a.location.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === "all" || a.status === filterStatus;
+  useEffect(() => setMounted(true), []);
 
-    // 12-month freshness check
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    const lastUpdate = new Date((a as any).updated_at || (a as any).created_at);
-    const isFresh = lastUpdate >= oneYearAgo;
+  useEffect(() => {
+    if (!mounted) return;
+    loadAttractions();
+  }, [mounted]);
 
-    // Auto-hide rule: Only show Approved and Recent items when filter is "all"
-    if (filterStatus === "all") {
-      return matchSearch && a.status === "approved" && isFresh;
+  // Outside click logic to refresh and reset filters
+  useEffect(() => {
+    if (!mounted) return;
+
+    function handleOutsideClick(event: MouseEvent) {
+      // If the click is outside the status summary filter cards wrapper
+      if (filterAreaRef.current && !filterAreaRef.current.contains(event.target as Node)) {
+        setFilterStatus("all");
+        loadAttractions();
+      }
     }
-    return matchSearch && matchStatus;
-  });
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [mounted]);
+
+  const loadAttractions = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("attractions")
+        .select("attraction_id, name_en, name_la, location, province, thumbnail_image, rating, status")
+        .neq("status", "draft")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setRows((data || []) as AttractionRow[]);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message ?? "Failed to load attractions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const counts = useMemo(() => {
+    const c = { pending: 0, approved: 0, rejected: 0 };
+    rows.forEach((r) => {
+      if (r.status === "pending") c.pending += 1;
+      else if (r.status === "approved") c.approved += 1;
+      else if (r.status === "rejected") c.rejected += 1;
+    });
+    return c;
+  }, [rows]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((a) => {
+      const name = (a.name_en || a.name_la || "").toLowerCase();
+      const location = (a.location || "").toLowerCase();
+      const province = (a.province || "").toLowerCase();
+      const matchSearch = !q || name.includes(q) || location.includes(q) || province.includes(q);
+      const matchStatus = filterStatus === "all" || a.status === filterStatus;
+      return matchSearch && matchStatus;
+    });
+  }, [rows, search, filterStatus]);
 
   if (!mounted) return null;
 
   return (
     <DashboardLayout title={t("sidebar.attractions")} subtitle="Manage all attractions in the system">
       <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
-        {/* Status Summary */}
-        <div className="grid grid-cols-3 gap-3">
+        
+        {/* Clickable Status Summary Metrics container wrapped with a Ref */}
+        <div ref={filterAreaRef} className="grid grid-cols-3 gap-3">
           {[
-            { label: "Approved", count: localAttractions.filter((a) => a.status === "approved").length, status: "approved", color: "text-emerald-500" },
-            { label: "Pending", count: localAttractions.filter((a) => a.status === "pending").length, status: "pending", color: "text-amber-500" },
-            { label: "Draft", count: localAttractions.filter((a) => a.status === "draft").length, status: "draft", color: "text-red-500" },
-          ].map((s) => (
-            <motion.div key={s.label} variants={itemVariants}>
-              <Card className={`border-0 shadow-md text-center cursor-pointer hover:shadow-lg transition-shadow ${filterStatus === s.status ? "ring-2 ring-teal-500/50" : ""}`} onClick={() => setFilterStatus(filterStatus === s.status ? "all" : s.status)}>
-                <CardContent className="p-3 sm:p-4">
-                  <p className={`text-2xl sm:text-3xl font-bold ${s.color}`}>{s.count}</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">{s.label}</p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+            { label: "Pending", count: counts.pending, icon: Clock, color: "text-amber-500", statusValue: "pending" as const },
+            { label: "Approved", count: counts.approved, icon: CheckCircle, color: "text-emerald-500", statusValue: "approved" as const },
+            { label: "Rejected", count: counts.rejected, icon: AlertTriangle, color: "text-red-500", statusValue: "rejected" as const },
+          ].map((s) => {
+            const Icon = s.icon;
+            const isActive = filterStatus === s.statusValue;
+            
+            return (
+              <motion.div key={s.label} variants={itemVariants}>
+                <Card 
+                  className={`border-0 shadow-md text-center cursor-pointer transition-all hover:shadow-lg active:scale-[0.99] select-none ${
+                    isActive ? "ring-2 ring-teal-500 shadow-lg bg-teal-50/10 dark:bg-teal-950/10" : ""
+                  }`}
+                  onClick={(e) => {
+                    // Stop event from instantly triggering window outside click logic
+                    e.stopPropagation();
+                    setFilterStatus(isActive ? "all" : s.statusValue);
+                  }}
+                >
+                  <CardContent className="p-3 sm:p-4">
+                    <Icon className={`w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 ${s.color}`} />
+                    <p className={`text-2xl sm:text-3xl font-bold ${s.color}`}>{s.count}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">{s.label}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
         </div>
 
-        {/* Search & List */}
+        {/* Search & List Display Card Output */}
         <motion.div variants={itemVariants}>
-          <Card className="border-0 shadow-md">
+          <Card className="border-0 shadow-md" onClick={(e) => e.stopPropagation()}>
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-teal-500" />
-                  All Attractions ({filtered.length})
+                  <span className="capitalize">{filterStatus === "all" ? "All" : filterStatus}</span> Attractions ({filtered.length})
                 </CardTitle>
-                <div className="relative w-full sm:w-auto">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Search attractions..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:flex-initial">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search attractions..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-9 h-9 text-sm"
+                    />
+                  </div>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {filtered.map((a) => (
-                  <div key={a.id} className="flex items-center gap-3 p-3 rounded-xl border bg-card hover:shadow-sm transition-shadow">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-teal-500/20 to-emerald-500/20 border border-teal-500/20 flex items-center justify-center shrink-0 overflow-hidden">
-                      {a.images[0] ? <img src={a.images[0]} alt={a.name} className="w-full h-full object-cover" /> : <Building2 className="w-5 h-5 text-teal-500" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium truncate">{a.name}</p>
-                        <Badge variant="outline" className={`${statusBadge[a.status] || ""} text-[10px]`}>{a.status}</Badge>
+              {loading ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <RefreshCw className="w-5 h-5 animate-spin text-teal-500" />
+                  <span>Loading attractions...</span>
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="py-12 text-center text-sm text-muted-foreground">
+                  No {filterStatus !== "all" ? `${filterStatus} ` : ""}attractions found.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filtered.map((a) => (
+                    <div
+                      key={a.attraction_id}
+                      className="flex items-center gap-3 p-3 rounded-xl border bg-card hover:shadow-sm transition-shadow"
+                    >
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-teal-500/20 to-emerald-500/20 border border-teal-500/20 flex items-center justify-center shrink-0 overflow-hidden">
+                        {a.thumbnail_image ? (
+                          <img
+                            src={baseURLImage + a.thumbnail_image}
+                            alt={a.name_en || a.name_la || ""}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Building2 className="w-5 h-5 text-teal-500" />
+                        )}
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
-                        <span className="text-xs text-muted-foreground truncate">{a.location}</span>
-                        <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
-                        <span className="text-xs font-medium">{a.rating}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium truncate">{a.name_en || a.name_la || "Untitled"}</p>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
+                          <span className="text-xs text-muted-foreground truncate">{a.location || a.province || "-"}</span>
+                          <Star className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+                          <span className="text-xs font-medium">{Number(a.rating || 0).toFixed(1)}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Badge variant="outline" className={`${statusBadge[String(a.status)] || ""} text-[10px] capitalize`}>
+                          {a.status}
+                        </Badge>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600"><Trash2 className="w-4 h-4" /></Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
