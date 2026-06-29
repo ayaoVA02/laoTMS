@@ -15,7 +15,8 @@
     "register": "Register",
     "logout": "Logout",
     "profile": "Profile",
-    "language": "Language"
+    "language": "Language",
+    "account":"Account"
   },
   "home": {
     "heroTitle": "Explore Laos",
@@ -82,7 +83,12 @@
       "checkBack": "Check back soon for deals and discounts.",
       "perAdult": "/adult",
       "child": "Child",
-      "until": "Until"
+      "until": "Until",
+      "off": "OFF",
+      "adultLabel": "Adult",
+      "specialDeal": "Special Deal",
+      "limitedTime": "Limited Time",
+      "childLabel": "/Child"
     },
     "search": {
       "province": "All Provinces",

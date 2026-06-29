@@ -22,7 +22,7 @@ interface SocialFeedPayload {
 // =========================================================================
 // HELPER: Publish to Facebook Page (With Layout Sequence & Individual Captions)
 // =========================================================================
-export async function publishToFacebookPage(
+async function publishToFacebookPage(
   caption: string, 
   storagePaths: string[], 
   imageCaptions?: string[] // Custom array passed to subtitle individual photos in lightbox view

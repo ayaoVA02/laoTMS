@@ -15,7 +15,9 @@
     "register": "ລົງທະບຽນ",
     "logout": "ອອກຈາກລະບົບ",
     "profile": "ໂປຣໄຟລ໌",
-    "language": "ພາສາ"
+    "language": "ພາສາ",
+    "account":"ບັນຊີ"
+
   },
   "home": {
     "heroTitle": "ສຳຫຼວດລາວ",
@@ -82,7 +84,12 @@
       "checkBack": "ກະລຸນາກັບມາເບິ່ງໃໝ່ພາຍຫຼັງ.",
       "perAdult": "/ຜູ້ໃຫຍ່",
       "child": "ເດັກ",
-      "until": "ຮອດ"
+      "until": "ຮອດ",
+      "off": "OFF",
+      "adultLabel": "ຜູ້ໃຫຍ່",
+      "specialDeal": "ຂໍ້ສະເໜີພິເສດ",
+      "limitedTime": "ເວລາຈຳກັດ",
+      "childLabel": "/ເດັກ"
     },
     "search": {
       "province": "ທຸກແຂວງ",

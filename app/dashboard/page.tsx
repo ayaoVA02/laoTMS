@@ -13,10 +13,10 @@ import { useAppStore, type ViewMode } from "@/stores/app-store";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 
-import AdminDashboard from "./admin-dashboard/page";
+import AdminDashboard from "./admin-dashboard-content";
 import StaffDashboard from "./staff-dashboard/page";
-import EntrepreneurDashboard from "./entrepreneur-dashboard/page";
-import TouristDashboard from "./tourist-dashboard/page";
+import EntrepreneurDashboard from "./entrepreneur-dashboard-content";
+import TouristDashboard from "./tourist-dashboard-content";
 import LoginRequired from "@/components/shared/login-required";
 
 interface ReviewItem {
