@@ -58,9 +58,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <I18nextProvider i18n={i18n}>
         <FontProvider>
-          {/* ✅ Restore saved language after hydration (fixes hydration mismatch) */}
+          {/*  Restore saved language after hydration (fixes hydration mismatch) */}
           <LanguageHydration />
-          {/* ✅ AuthProvider wraps everything so initAuth runs before any page renders */}
+          {/*  AuthProvider wraps everything so initAuth runs before any page renders */}
           <AuthProvider>
             <Toaster position="top-right" />
             <Navbar />
