@@ -177,6 +177,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       set({ user, isAuthenticated: true, loading: false });
+
+      void import('@/stores/attraction-store').then((mod) => {
+        mod.useAttractionStore.getState().fetchFavorites(user.id);
+      }).catch(() => {
+        // ignore favorite fetch failures here
+      });
+
       return { success: true };
     } catch {
       set({ loading: false });
@@ -298,6 +305,12 @@ supabase.auth.onAuthStateChange((event, session) => {
       loading: false,
       isAuthReady: true,
     });
+
+    void import('@/stores/attraction-store')
+      .then((mod) => mod.useAttractionStore.getState().fetchFavorites(session.user.id))
+      .catch(() => {
+        // ignore favorite fetch failures here
+      });
 
     // Fetch detailed profile in background (non-blocking)
     if (event !== 'INITIAL_SESSION' || !store.user) {

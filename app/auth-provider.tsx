@@ -14,7 +14,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const initAuth = useAuthStore((s) => s.initAuth);
 
   useEffect(() => {
-    // 1. Initialize Auth state on mount to restore session from storage/cookies
+    // 1. Initialize auth state on mount to restore session from storage/cookies
     initAuth();
 
     // ── OneSignal ────────────────────────────────────────────────────────────
