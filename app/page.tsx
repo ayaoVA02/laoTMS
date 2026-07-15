@@ -74,6 +74,24 @@ function daysRemaining(dEnd: string | null): number | null {
   return diff > 0 ? diff : 0;
 }
 
+function isPromotionVisible(promo: { isActive?: boolean; dStart?: string | null; dEnd?: string | null }) {
+  if (promo.isActive === false) return false;
+
+  const now = new Date();
+  const start = promo.dStart ? new Date(promo.dStart) : null;
+  const end = promo.dEnd ? new Date(promo.dEnd) : null;
+
+  if (start && !Number.isNaN(start.getTime()) && start > now) return false;
+
+  if (end && !Number.isNaN(end.getTime())) {
+    const endOfDay = new Date(end);
+    endOfDay.setHours(23, 59, 59, 999);
+    if (endOfDay < now) return false;
+  }
+
+  return true;
+}
+
 export default function Home() {
   const { t, i18n } = useTranslation();
   const {
@@ -95,6 +113,11 @@ export default function Home() {
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  const visiblePromotions = useMemo(
+    () => promotions.filter(isPromotionVisible),
+    [promotions]
+  );
 
   // Build slide data from i18n
   const slides = useMemo(() => getSlides(t), [t, i18n.language]);
@@ -283,7 +306,9 @@ export default function Home() {
                     <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 text-teal-600 transition-all duration-300 group-hover:from-teal-500 group-hover:to-emerald-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-teal-500/30">
                       <IconComponent className="h-7 w-7" />
                     </div>
-                    <span className="text-sm font-semibold text-gray-800">{category.name_en}</span>
+                    <span className="text-sm font-semibold text-gray-800">
+                      {i18n.language?.startsWith("la") ? category.name_la || category.name_en : category.name_en || category.name_la}
+                    </span>
                   </Link>
                 </motion.div>
               );
@@ -568,13 +593,13 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          ) : promotions.length > 0 ? (
+          ) : visiblePromotions.length > 0 ? (
             <div
               id="promos-scroll"
               className="flex gap-5 overflow-x-auto scroll-smooth pb-4 scrollbar-hide"
               style={{ scrollSnapType: 'x mandatory' }}
             >
-              {promotions.map((promo, index) => {
+              {visiblePromotions.map((promo, index) => {
                 const days = daysRemaining(promo.dEnd);
                 const coverImage = promo.image
                   ? R2_IMAGE_URL + promo.image
@@ -644,7 +669,7 @@ export default function Home() {
                           {promo.adult > 0 && (
                             <div className="flex items-center gap-1 text-sm text-gray-700">
                               <Users className="h-3.5 w-3.5 text-gray-400" />
-                              <span className="font-semibold text-gray-900">
+                              <span className="font-semibold text-gray-500">
                                 LAK {promo.adult.toLocaleString()}
                               </span>
                               <span className="text-gray-400 text-xs">{t("home.promo.perAdult", "/adult")}</span>
@@ -654,7 +679,7 @@ export default function Home() {
                             <div className="flex items-center gap-1 text-sm text-gray-700">
                               <Users className="h-3.5 w-3.5 text-gray-400" />
 
-                              <span className="font-semibold text-gray-900">
+                              <span className="font-semibold text-gray-500">
                                 LAK {promo.children.toLocaleString()}
                               </span>
                               <span className="text-gray-400 text-xs">{t("home.promo.childLabel", "/Child")}</span>
@@ -700,7 +725,7 @@ export default function Home() {
           )}
 
           {/* Mobile scroll controls */}
-          {promotions.length > 0 && (
+          {visiblePromotions.length > 0 && (
             <div className="mt-6 flex items-center justify-between sm:hidden">
               <div className="flex items-center gap-2">
                 <button

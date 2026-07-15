@@ -66,6 +66,22 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       if (session?.user) {
         await OneSignal.login(session.user.id);
       }
+
+      // ── Listen for incoming notifications ────────────────────────────────
+      OneSignal.Notifications.addEventListener('click', (notification: any) => {
+        console.log('OneSignal notification clicked:', notification);
+      });
+
+      OneSignal.Notifications.addEventListener('foreground', (notification: any) => {
+        console.log('OneSignal notification received (foreground):', notification);
+        // Show browser notification even in foreground
+        if (Notification.permission === 'granted' && notification.notification?.title) {
+          new Notification(notification.notification.title, {
+            body: notification.notification.body,
+            icon: '/icon-192x192.png',
+          });
+        }
+      });
     });
 
     return () => {

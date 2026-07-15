@@ -22,6 +22,7 @@ import toast from "react-hot-toast";
 import DashboardLayout from "@/components/shared/dashboard-layout";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/auth-store";
+import { sendPushNotification } from "@/lib/send-push-notification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -254,21 +255,37 @@ export default function ApproveAttractionsPage() {
         .eq("attraction_id", id);
       if (error) throw error;
 
-      // Step 2: Insert notification for the entrepreneur
+      // Step 2: Insert notification for the entrepreneur + Send Push Notification
       const targetRow = rows.find((r) => r.attraction_id === id);
       if (targetRow) {
         const nameStr = targetRow.name_en || targetRow.name_la || "Your attraction submission";
+        const title = status === "approved" ? "Submission Approved! 🎉" : "Submission Rejected";
+        const message =
+          status === "approved"
+            ? `Your listing "${nameStr}" is now verified and active for public viewing.`
+            : `Your listing "${nameStr}" did not meet our verification standards.`;
+
+        // Insert into database
         await supabase.from("notifications").insert({
           user_id: targetRow.user_id,
           type: status === "approved" ? "approved" : "rejected",
-          title: status === "approved" ? "Submission Approved! 🎉" : "Submission Rejected",
-          message:
-            status === "approved"
-              ? `Your listing "${nameStr}" is now verified and active for public viewing.`
-              : `Your listing "${nameStr}" did not meet our verification standards.`,
+          title,
+          message,
           read: false,
           related_id: id,
         });
+
+        // Send push notification via OneSignal
+        const pushResult = await sendPushNotification(
+          targetRow.user_id,
+          title,
+          message,
+          id
+        );
+
+        if (!pushResult.success) {
+          console.warn("Failed to send push notification, but database notification saved:", pushResult.error);
+        }
       }
 
       // Step 3: If approved, check social row — only post to Facebook if facebook = true

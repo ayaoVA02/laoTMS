@@ -107,7 +107,7 @@ function formatLAK(price: number): string {
 }
 
 export default function AttractionDetailPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const params = useParams();
   const router = useRouter();
   const { plans, fetchPlans, addAttractionToPlan } = useTravelPlanStore();
@@ -604,11 +604,11 @@ export default function AttractionDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                  {attraction.name}
+                  {i18n.language?.startsWith("la") ? attraction.nameLa || attraction.nameEn : attraction.nameEn || attraction.nameLa}
                 </h1>
-                <Badge className="bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 capitalize">
+                {/* <Badge className="bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 capitalize">
                   {attraction.category}
-                </Badge>
+                </Badge> */}
               </div>
               <div className="mt-2 flex items-center gap-1.5 text-sm text-gray-500">
                 <MapPin className="h-4 w-4 text-teal-500" />
@@ -900,7 +900,7 @@ export default function AttractionDetailPage() {
                   <Popup>
                     <div className="p-1">
                       <h3 className="font-semibold text-sm">
-                        {attraction.name}
+                        {i18n.language?.startsWith("la") ? attraction.nameLa || attraction.nameEn : attraction.nameEn || attraction.nameLa}
                       </h3>
 
                       {attraction.nameLa && (
