@@ -12,6 +12,7 @@ import { HoursFeesSection } from "@/components/subsections/hours-fees-section";
 import { FacilitiesSection } from "@/components/subsections/facilities-section";
 import { SettingsSection } from "@/components/subsections/settings-section";
 import { FormActions } from "@/components/subsections/form-actions";
+import provincesData from "@/laos_provinces_districts.json";
 
 const MapPickerDialog = dynamic(
   () => import("@/components/shared/Mappickerdialog"),
@@ -126,7 +127,34 @@ export default function CreateAttractionPage() {
           form.setPickOnMap(true);
           form.setLatitude(String(coords.lat));
           form.setLongitude(String(coords.lng));
-          if (address) form.setLocation(address);
+          if (address) {
+            const provinces = provincesData[0].provinces;
+
+            // Normalize province to Lao name
+            const rawProvince = address.province || "";
+            const matchedProvince = provinces.find(
+              (p) => p.province_en === rawProvince || p.province_la === rawProvince
+            );
+            const provinceLa = matchedProvince ? matchedProvince.province_la : rawProvince;
+
+            // Normalize district to Lao name
+            const rawDistrict = address.district || "";
+            let districtLa = rawDistrict;
+            if (matchedProvince) {
+              const matchedDistrict = matchedProvince.districts.find(
+                (d) => d.district_en === rawDistrict || d.district_la === rawDistrict
+              );
+              if (matchedDistrict) districtLa = matchedDistrict.district_la;
+            }
+
+            const villageLa = address.village || "";
+
+            // Fill province/district/village in Lao, leave location empty for manual input
+            form.setProvince(provinceLa);
+            form.setDistrict(districtLa);
+            form.setVillage(villageLa);
+            form.setLocation(""); // User fills manually
+          }
         }}
       />
     </DashboardLayout>

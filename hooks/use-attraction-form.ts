@@ -71,21 +71,14 @@ export function useAttractionForm() {
   useEffect(() => {
     supabase
       .from("types")
-      .select("type_id, name_en")
+      .select("type_id, name_en, name_la")
       .eq("is_active", true)
       .order("name_en")
+      .order("name_la")
       .then(({ data }) => {
         if (data) setTypes(data);
       });
   }, []);
-
-  // Clear province/district/village when switching to map mode
-  useEffect(() => {
-    if (!pickOnMap) return;
-    setProvince("");
-    setDistrict("");
-    setVillage("");
-  }, [pickOnMap]);
 
   // Keep social selected images in sync with current image list
   useEffect(() => {
@@ -343,9 +336,9 @@ export function useAttractionForm() {
         description,
         activity: activity || "",
         license: license || "",
-        province: !pickOnMap && province ? province : "",
-        district: !pickOnMap && district ? district : "",
-        village: !pickOnMap && village ? village : "",
+        province: province || "",
+        district: district || "",
+        village: village || "",
         location: location || "",
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,

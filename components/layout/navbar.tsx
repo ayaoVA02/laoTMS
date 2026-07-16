@@ -357,7 +357,7 @@ export default function Navbar() {
                     size="sm"
                     className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:from-teal-600 hover:to-emerald-600 shadow-md shadow-teal-500/20"
                   >
-                    {/* {t("nav.login")} */} Account
+                    {/* {t("nav.login")} */} {t("nav.account")}
                   </Button>
                 </Link>
                 {/* <Link href="/auth/register">
@@ -434,7 +434,7 @@ export default function Navbar() {
                     variant="outline"
                     className="w-full bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:from-teal-600 hover:to-emerald-600 shadow-md shadow-teal-500/20"
                   >
-                    {/* {t("nav.login")} */} Account
+                   {t("nav.account")}
                   </Button>
                 </Link>
                 {/* <Link href="/auth/register" className="block">

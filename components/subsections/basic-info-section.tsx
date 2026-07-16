@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -43,13 +44,15 @@ export function BasicInfoSection({
   clearError,
   inputCls,
 }: BasicInfoSectionProps) {
+  const { t, i18n } = useTranslation();
+
   return (
-    <Section title="Basic Information" icon={<Info className="w-4 h-4" />}>
+    <Section title={t("dashboard.createForm.basicInfo.title", "Basic Information")} icon={<Info className="w-4 h-4" />}>
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Name (English)" required hasError={errors.has("nameEn")}>
+          <Field label={t("dashboard.createForm.basicInfo.nameEn", "Name (English)")} required hasError={errors.has("nameEn")}>
             <Input
-              placeholder="e.g. Kuang Si Waterfall"
+              placeholder={t("dashboard.createForm.basicInfo.nameEnPlaceholder", "e.g. Kuang Si Waterfall")}
               value={nameEn}
               onChange={(e) => {
                 setNameEn(e.target.value);
@@ -58,16 +61,16 @@ export function BasicInfoSection({
               className={inputCls("nameEn")}
             />
           </Field>
-          <Field label="Name (Lao)">
+          <Field label={t("dashboard.createForm.basicInfo.nameLa", "Name (Lao)")}>
             <Input
-              placeholder="ຊື່ພາສາລາວ"
+              placeholder={t("dashboard.createForm.basicInfo.nameLaPlaceholder", "ຊື່ພາສາລາວ")}
               value={nameLa}
               onChange={(e) => setNameLa(e.target.value)}
             />
           </Field>
         </div>
 
-        <Field label="Category" required hasError={errors.has("typeId")}>
+        <Field label={t("dashboard.createForm.basicInfo.category", "Category")} required hasError={errors.has("typeId")}>
           <Select
             value={typeId}
             onValueChange={(v) => {
@@ -76,21 +79,21 @@ export function BasicInfoSection({
             }}
           >
             <SelectTrigger className={inputCls("typeId")}>
-              <SelectValue placeholder="Select category" />
+              <SelectValue placeholder={t("dashboard.createForm.basicInfo.categoryPlaceholder", "Select category")} />
             </SelectTrigger>
             <SelectContent>
               {types.map((tp) => (
                 <SelectItem key={tp.type_id} value={tp.type_id}>
-                  {tp.name_en}
+                  { i18n.language === "la" ? tp.name_la : tp.name_en}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
 
-        <Field label="Description" required hasError={errors.has("description")}>
+        <Field label={t("dashboard.createForm.basicInfo.description", "Description")} required hasError={errors.has("description")}>
           <Textarea
-            placeholder="Describe your attraction in detail..."
+            placeholder={t("dashboard.createForm.basicInfo.descriptionPlaceholder", "Describe your attraction in detail...")}
             value={description}
             onChange={(e) => {
               setDescription(e.target.value);
@@ -100,17 +103,17 @@ export function BasicInfoSection({
           />
         </Field>
 
-        <Field label="Activities">
+        <Field label={t("dashboard.createForm.basicInfo.activities", "Activities")}>
           <Input
-            placeholder="e.g. Swimming, hiking, photography"
+            placeholder={t("dashboard.createForm.basicInfo.activitiesPlaceholder", "e.g. Swimming, hiking, photography")}
             value={activity}
             onChange={(e) => setActivity(e.target.value)}
           />
         </Field>
 
-        <Field label="License / Permit Number">
+        <Field label={t("dashboard.createForm.basicInfo.license", "License / Permit Number")}>
           <Input
-            placeholder="Official license number (if any)"
+            placeholder={t("dashboard.createForm.basicInfo.licensePlaceholder", "Official license number (if any)")}
             value={license}
             onChange={(e) => setLicense(e.target.value)}
           />

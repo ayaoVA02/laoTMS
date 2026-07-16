@@ -1,4 +1,5 @@
 import { Clock, DollarSign } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -32,18 +33,20 @@ export function HoursFeesSection({
   entryFeeForeigner, setEntryFeeForeigner,
   bestTimeVisit, setBestTimeVisit,
 }: HoursFeesSectionProps) {
+  const { t } = useTranslation();
+
   return (
-    <Section title="Hours & Entry Fees" icon={<Clock className="w-4 h-4" />}>
+    <Section title={t("dashboard.createForm.hours.title", "Hours & Entry Fees")} icon={<Clock className="w-4 h-4" />}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Opening Time">
+          <Field label={t("dashboard.createForm.hours.openingTime", "Opening Time")}>
             <Input
               type="time"
               value={openTime}
               onChange={(e) => setOpenTime(e.target.value)}
             />
           </Field>
-          <Field label="Closing Time">
+          <Field label={t("dashboard.createForm.hours.closingTime", "Closing Time")}>
             <Input
               type="time"
               value={closeTime}
@@ -54,13 +57,13 @@ export function HoursFeesSection({
 
         <FacilityToggle
           icon={<DollarSign className="w-4 h-4" />}
-          label="Free Entry"
+          label={t("dashboard.createForm.hours.freeEntry", "Free Entry")}
           checked={isFreeEntry}
           onChange={setIsFreeEntry}
         />
 
         {!isFreeEntry && (
-          <Field label="Entry Fee for Foreigners (LAK)">
+          <Field label={t("dashboard.createForm.hours.entryFee", "Entry Fee for Foreigners (LAK)")}>
             <div className="relative">
               <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -74,10 +77,10 @@ export function HoursFeesSection({
           </Field>
         )}
 
-        <Field label="Best Time to Visit">
+        <Field label={t("dashboard.createForm.hours.bestTime", "Best Time to Visit")}>
           <Select value={bestTimeVisit} onValueChange={setBestTimeVisit}>
             <SelectTrigger>
-              <SelectValue placeholder="Select best season" />
+              <SelectValue placeholder={t("dashboard.createForm.hours.bestTimePlaceholder", "Select best season")} />
             </SelectTrigger>
             <SelectContent>
               {BEST_TIMES.map((bt) => (

@@ -40,6 +40,7 @@ export interface Attraction {
   village: string;
   typeId: string;
   nameLa: string;
+  nameEn: string;
   thumbnailImage: string;
   isSixmonthOld: boolean;
   expired: boolean;
@@ -65,6 +66,24 @@ export interface Promotion {
   thumbnailImage: string;
 }
 
+function isPromotionActive(row: Record<string, unknown>): boolean {
+  if (row.is_active === false) return false;
+
+  const now = new Date();
+  const start = row.d_start ? new Date(String(row.d_start)) : null;
+  const end = row.d_end ? new Date(String(row.d_end)) : null;
+
+  if (start && !Number.isNaN(start.getTime()) && start > now) return false;
+
+  if (end && !Number.isNaN(end.getTime())) {
+    const endOfDay = new Date(end);
+    endOfDay.setHours(23, 59, 59, 999);
+    if (endOfDay < now) return false;
+  }
+
+  return true;
+}
+
 function mapAttraction(row: Record<string, unknown>, images: string[] = [], videos: string[] = []): Attraction {
   const facilities: string[] = [];
   if (row.has_parking) facilities.push('Parking');
@@ -84,6 +103,7 @@ function mapAttraction(row: Record<string, unknown>, images: string[] = [], vide
   return {
     id: row.attraction_id as string,
     name: row.name_en as string,
+    nameEn: row.name_en as string,
     nameLa: row.name_la as string,
     description: row.description as string,
     shortDescription: (row.description as string || '').substring(0, 80) + '...',
@@ -209,6 +229,7 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
         .from('attractions')
         .select('*')
         .eq('status', 'approved')
+        .eq('is_active', true)
         .eq('expired', false)
         .order('created_at', { ascending: false });
       if (error) { set({ loading: false }); return; }
@@ -392,28 +413,30 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
         return;
       }
 
-      const mapped: Promotion[] = data.map((row) => {
-        const attraction = (row.attractions as unknown) as Record<string, unknown> | null;
-        return {
-          promotionId: row.promotion_id,
-          attractionId: row.attraction_id,
-          attractionName: (attraction?.name_en as string) || '',
-          attractionLocation: (attraction?.location as string) || '',
-          attractionProvince: (attraction?.province as string) || '',
-          attractionRating: Number(attraction?.rating) || 0,
-          title: row.title,
-          type: (row.type as 'percentage' | 'fixed') || 'percentage',
-          price: Number(row.price) || 0,
-          dStart: row.d_start,
-          dEnd: row.d_end,
-          image: row.image || '',
-          children: Number(row.children) || 0,
-          adult: Number(row.adult) || 0,
-          isActive: Boolean(row.is_active),
-          usesCount: Number(row.uses_count) || 0,
-          thumbnailImage: (attraction?.thumbnail_image as string) || '',
-        };
-      });
+      const mapped: Promotion[] = (data || [])
+        .filter((row) => isPromotionActive(row))
+        .map((row) => {
+          const attraction = (row.attractions as unknown) as Record<string, unknown> | null;
+          return {
+            promotionId: row.promotion_id,
+            attractionId: row.attraction_id,
+            attractionName: (attraction?.name_en as string) || '',
+            attractionLocation: (attraction?.location as string) || '',
+            attractionProvince: (attraction?.province as string) || '',
+            attractionRating: Number(attraction?.rating) || 0,
+            title: row.title,
+            type: (row.type as 'percentage' | 'fixed') || 'percentage',
+            price: Number(row.price) || 0,
+            dStart: row.d_start,
+            dEnd: row.d_end,
+            image: row.image || '',
+            children: Number(row.children) || 0,
+            adult: Number(row.adult) || 0,
+            isActive: Boolean(row.is_active),
+            usesCount: Number(row.uses_count) || 0,
+            thumbnailImage: (attraction?.thumbnail_image as string) || '',
+          };
+        });
 
       set({ promotions: mapped, promotionsLoading: false });
     } catch {

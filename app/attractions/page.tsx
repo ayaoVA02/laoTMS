@@ -78,8 +78,16 @@ function AttractionsContent() {
     let sorted = [...filteredAttractions];
 
     // Apply Province/District filters locally if present
-    if (province) sorted = sorted.filter(a => a.location?.includes(province));
-    if (district) sorted = sorted.filter(a => a.location?.includes(district));
+    // Match by both Lao and English names since DB stores Lao but user might search in English
+    if (province) {
+      const matchedProvince = provinces.find((p) => p.province_en === province || p.province_la === province);
+      sorted = sorted.filter(a => a.province === province || (matchedProvince && a.province === matchedProvince.province_la));
+    }
+    if (district) {
+      const selectedP = provinces.find((p) => p.province_en === province || p.province_la === province);
+      const matchedDistrict = selectedP?.districts.find((d) => d.district_en === district || d.district_la === district);
+      sorted = sorted.filter(a => a.district === district || (matchedDistrict && a.district === matchedDistrict.district_la));
+    }
 
     switch (sortBy) {
       case "rating":

@@ -92,37 +92,29 @@ const DynamicMap = dynamic(
             return;
 
           if (routingControlRef.current) {
-            map.removeControl(
-              routingControlRef.current
-            );
+            try {
+              map.removeControl(
+                routingControlRef.current
+              );
+            } catch {
+              // ignore if control already removed
+            }
             routingControlRef.current =
               null;
           }
 
           routingControlRef.current =
             L.Routing.control({
-              waypoints: points.map((p) =>
-                L.latLng(p[0], p[1])
-              ),
-
+              waypoints: points.map((p) => L.latLng(p[0], p[1])),
               routeWhileDragging: false,
               addWaypoints: false,
               draggableWaypoints: false,
               fitSelectedRoutes: true,
-
               show: false,
               collapsible: true,
-
               createMarker: () => null,
-
               lineOptions: {
-                styles: [
-                  {
-                    color: "#0d9488",
-                    weight: 6,
-                    opacity: 0.9,
-                  },
-                ],
+                styles: [{ color: "#0d9488", weight: 6, opacity: 0.9 }],
               },
             });
 
@@ -130,21 +122,29 @@ const DynamicMap = dynamic(
             map
           );
 
-          const container =
-            routingControlRef.current.getContainer();
+          try {
+            const container =
+              routingControlRef.current.getContainer();
 
-          if (container) {
-            container.style.display =
-              "none";
+            if (container) {
+              container.style.display =
+                "none";
+            }
+          } catch {
+            // ignore if container not ready
           }
 
           return () => {
             if (
               routingControlRef.current
             ) {
-              map.removeControl(
-                routingControlRef.current
-              );
+              try {
+                map.removeControl(
+                  routingControlRef.current
+                );
+              } catch {
+                // ignore if map/control already disposed
+              }
               routingControlRef.current =
                 null;
             }
@@ -200,12 +200,12 @@ const DynamicMap = dynamic(
 
             {routePoints.length >
               1 && (
-              <RoutingMachine
-                points={
-                  routePoints
-                }
-              />
-            )}
+                <RoutingMachine
+                  points={
+                    routePoints
+                  }
+                />
+              )}
 
             {userLocation && (
               <Marker
@@ -290,9 +290,9 @@ function haversineDistance(
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -315,13 +315,13 @@ export default function TravelPlanDetailPage() {
   const [showRouting, setShowRouting] = useState(true);
   const [transportMode, setTransportMode] = useState<"car" | "motorbike" | "bus">("car");
 
-const TRANSPORT_SPEEDS = {
-  car: 60,
-  motorbike: 70,
-  bus: 45,
-};
+  const TRANSPORT_SPEEDS = {
+    car: 60,
+    motorbike: 70,
+    bus: 45,
+  };
 
-const getTransportSpeed = () => TRANSPORT_SPEEDS[transportMode];
+  const getTransportSpeed = () => TRANSPORT_SPEEDS[transportMode];
 
   const toggleStopExpand = (attractionId: string) => {
     setExpandedStops((prev) => {
@@ -409,7 +409,7 @@ const getTransportSpeed = () => TRANSPORT_SPEEDS[transportMode];
     const details = [];
     let cumulativeDistance = 0;
     const speed = getTransportSpeed();
-  
+
 
     if (userLocation && planAttractions.length > 0) {
       // Distance from user to first attraction
@@ -501,19 +501,19 @@ const getTransportSpeed = () => TRANSPORT_SPEEDS[transportMode];
     return Math.max(diff, 1);
   };
 
-const formatTimeEstimate = (totalMinutes: number) => {
-  const days = Math.floor(totalMinutes / (24 * 60));
-  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
-  const mins = totalMinutes % 60;
+  const formatTimeEstimate = (totalMinutes: number) => {
+    const days = Math.floor(totalMinutes / (24 * 60));
+    const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+    const mins = totalMinutes % 60;
 
-  const parts = [];
+    const parts = [];
 
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (mins > 0) parts.push(`${mins}m`);
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (mins > 0) parts.push(`${mins}m`);
 
-  return parts.length ? parts.join(" ") : "0m";
-};
+    return parts.length ? parts.join(" ") : "0m";
+  };
 
   if (!plan) {
     return (
@@ -646,7 +646,7 @@ const formatTimeEstimate = (totalMinutes: number) => {
                       </motion.div>
                     </motion.button>
                   </div>
-                  
+
                   {/* Transport Mode Selector */}
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-gray-600">
@@ -659,11 +659,10 @@ const formatTimeEstimate = (totalMinutes: number) => {
                           onClick={() => setTransportMode(mode)}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                            transportMode === mode
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${transportMode === mode
                               ? "bg-teal-600 text-white"
                               : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                          }`}
+                            }`}
                         >
                           {mode.charAt(0).toUpperCase() + mode.slice(1)}
                           {mode === "car" && " (60 km/h)"}
@@ -854,229 +853,229 @@ const formatTimeEstimate = (totalMinutes: number) => {
                 <div className="p-6 sm:p-8">
                   {planAttractions.length > 0 ? (
                     <div className="relative">
-                    <div className="absolute left-5 top-8 bottom-8 w-0.5 bg-gradient-to-b from-teal-400 via-emerald-400 to-teal-400" />
+                      <div className="absolute left-5 top-8 bottom-8 w-0.5 bg-gradient-to-b from-teal-400 via-emerald-400 to-teal-400" />
 
-                    <div className="space-y-3">
-                      {planAttractions.map((attraction, index) => {
-                        const isExpanded = expandedStops.has(attraction.id);
+                      <div className="space-y-3">
+                        {planAttractions.map((attraction, index) => {
+                          const isExpanded = expandedStops.has(attraction.id);
 
-                        return (
-                          <motion.div
-                            key={attraction.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{
-                              duration: 0.4,
-                              delay: 0.3 + index * 0.08,
-                            }}
-                            className="relative flex items-start gap-4"
-                          >
-                            {/* Order indicator */}
-                            <div className="relative shrink-0 flex items-center justify-center pt-1">
-                              <div className="h-10 w-10 rounded-full bg-white border-2 border-teal-500 flex items-center justify-center z-10 shadow-sm">
-                                <span className="text-sm font-bold text-teal-600">
-                                  {index + 1}
-                                </span>
+                          return (
+                            <motion.div
+                              key={attraction.id}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{
+                                duration: 0.4,
+                                delay: 0.3 + index * 0.08,
+                              }}
+                              className="relative flex items-start gap-4"
+                            >
+                              {/* Order indicator */}
+                              <div className="relative shrink-0 flex items-center justify-center pt-1">
+                                <div className="h-10 w-10 rounded-full bg-white border-2 border-teal-500 flex items-center justify-center z-10 shadow-sm">
+                                  <span className="text-sm font-bold text-teal-600">
+                                    {index + 1}
+                                  </span>
+                                </div>
                               </div>
-                            </div>
 
-                            {/* Stop Card */}
-                            <div className="flex-1 min-w-0">
-                              {/* Collapsed View */}
-                              <motion.button
-                                onClick={() => toggleStopExpand(attraction.id)}
-                                className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:border-teal-300 hover:bg-teal-50/30 group transition-all text-left"
-                                whileHover={{ scale: 1.01 }}
-                              >
-                                {/* Thumbnail */}
-                                <div className="relative shrink-0 h-16 w-16 sm:h-20 sm:w-20 rounded-lg overflow-hidden">
-                                  <Image
-                                    src={baseURLImage+attraction.images[0]}
-                                    alt={attraction.name}
-                                    fill
-                                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                  />
-                                </div>
-
-                                {/* Title and Location */}
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="text-sm font-semibold text-gray-900 truncate">
-                                    {attraction.name}
-                                  </h4>
-                                  <div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
-                                    <MapPin className="h-3 w-3 text-teal-500 shrink-0" />
-                                    <span className="truncate">
-                                      {attraction.location}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Expand Icon */}
-                                <motion.div
-                                  animate={{ rotate: isExpanded ? 180 : 0 }}
-                                  transition={{ duration: 0.2 }}
-                                  className="shrink-0 text-gray-400 group-hover:text-teal-600"
+                              {/* Stop Card */}
+                              <div className="flex-1 min-w-0">
+                                {/* Collapsed View */}
+                                <motion.button
+                                  onClick={() => toggleStopExpand(attraction.id)}
+                                  className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:border-teal-300 hover:bg-teal-50/30 group transition-all text-left"
+                                  whileHover={{ scale: 1.01 }}
                                 >
-                                  <ChevronDown className="h-5 w-5" />
-                                </motion.div>
-                              </motion.button>
+                                  {/* Thumbnail */}
+                                  <div className="relative shrink-0 h-16 w-16 sm:h-20 sm:w-20 rounded-lg overflow-hidden">
+                                    <Image
+                                      src={baseURLImage + attraction.images[0]}
+                                      alt={attraction.name}
+                                      fill
+                                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                    />
+                                  </div>
 
-                              {/* Expanded Details */}
-                              <motion.div
-                                initial={false}
-                                animate={{
-                                  height: isExpanded ? "auto" : 0,
-                                  opacity: isExpanded ? 1 : 0,
-                                  marginTop: isExpanded ? 12 : 0,
-                                }}
-                                transition={{ duration: 0.3 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="bg-white rounded-xl border border-teal-100 p-4 sm:p-6 space-y-4">
-                                  {/* Opening Hours */}
-                                  <div className="flex items-start gap-3">
-                                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50 shrink-0">
-                                      <Clock className="h-4 w-4 text-teal-600" />
-                                    </div>
-                                    <div>
-                                      <p className="text-xs font-medium text-gray-500 uppercase">
-                                        {t("travelPlans.hours", "Operating Hours")}
-                                      </p>
-                                      <p className="text-sm font-semibold text-gray-900 mt-1">
-                                        {attraction.openTime} - {attraction.closeTime}
-                                      </p>
+                                  {/* Title and Location */}
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="text-sm font-semibold text-gray-900 truncate">
+                                      {attraction.name}
+                                    </h4>
+                                    <div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                                      <MapPin className="h-3 w-3 text-teal-500 shrink-0" />
+                                      <span className="truncate">
+                                        {attraction.location}
+                                      </span>
                                     </div>
                                   </div>
 
-                                  {/* Description */}
-                                  {attraction.description && (
-                                    <div className="flex items-start gap-3 pt-2 border-t border-gray-100">
-                                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 shrink-0">
-                                        <MapPin className="h-4 w-4 text-emerald-600" />
-                                      </div>
-                                      <div className="flex-1">
-                                        <p className="text-xs font-medium text-gray-500 uppercase">
-                                          {t("travelPlans.description", "About")}
-                                        </p>
-                                        <p className="text-sm text-gray-700 mt-2 line-clamp-3">
-                                          {attraction.description}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  )}
+                                  {/* Expand Icon */}
+                                  <motion.div
+                                    animate={{ rotate: isExpanded ? 180 : 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="shrink-0 text-gray-400 group-hover:text-teal-600"
+                                  >
+                                    <ChevronDown className="h-5 w-5" />
+                                  </motion.div>
+                                </motion.button>
 
-                                  {/* Price */}
-                                  {attraction.price !== undefined && (
-                                    <div className="flex items-start gap-3 pt-2 border-t border-gray-100">
-                                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 shrink-0">
-                                        <Clock className="h-4 w-4 text-amber-600" />
+                                {/* Expanded Details */}
+                                <motion.div
+                                  initial={false}
+                                  animate={{
+                                    height: isExpanded ? "auto" : 0,
+                                    opacity: isExpanded ? 1 : 0,
+                                    marginTop: isExpanded ? 12 : 0,
+                                  }}
+                                  transition={{ duration: 0.3 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="bg-white rounded-xl border border-teal-100 p-4 sm:p-6 space-y-4">
+                                    {/* Opening Hours */}
+                                    <div className="flex items-start gap-3">
+                                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-50 shrink-0">
+                                        <Clock className="h-4 w-4 text-teal-600" />
                                       </div>
                                       <div>
                                         <p className="text-xs font-medium text-gray-500 uppercase">
-                                          {t("travelPlans.entryFee", "Entry Fee")}
+                                          {t("travelPlans.hours", "Operating Hours")}
                                         </p>
                                         <p className="text-sm font-semibold text-gray-900 mt-1">
-                                          {attraction.isFreeEntry
-                                            ? "Free"
-                                            : `${attraction.price.toLocaleString()} LAK`}
+                                          {attraction.openTime} - {attraction.closeTime}
                                         </p>
                                       </div>
                                     </div>
-                                  )}
 
-                                  {/* Facilities */}
-                                  {attraction.facilities &&
-                                    attraction.facilities.length > 0 && (
+                                    {/* Description */}
+                                    {attraction.description && (
                                       <div className="flex items-start gap-3 pt-2 border-t border-gray-100">
-                                       
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 shrink-0">
+                                          <MapPin className="h-4 w-4 text-emerald-600" />
+                                        </div>
                                         <div className="flex-1">
                                           <p className="text-xs font-medium text-gray-500 uppercase">
-                                            {t("travelPlans.facilities", "Facilities")}
+                                            {t("travelPlans.description", "About")}
                                           </p>
-                                          <div className="flex flex-wrap gap-1.5 mt-2">
-                                            {attraction.facilities
-                                              .slice(0, 5)
-                                              .map((facility: string) => (
-                                                <Badge
-                                                  key={facility}
-                                                  className="bg-blue-50 text-blue-700 border-blue-100 text-xs"
-                                                >
-                                                  {facility}
-                                                </Badge>
-                                              ))}
-                                            {attraction.facilities.length >
-                                              5 && (
-                                              <Badge className="bg-gray-100 text-gray-700 text-xs">
-                                                +
-                                                {attraction.facilities.length -
-                                                  5}
-                                              </Badge>
-                                            )}
-                                          </div>
+                                          <p className="text-sm text-gray-700 mt-2 line-clamp-3">
+                                            {attraction.description}
+                                          </p>
                                         </div>
                                       </div>
                                     )}
 
-                                  {/* Action Buttons */}
-                                  <div className="flex gap-2 pt-4 border-t border-gray-100">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => toggleStopExpand(attraction.id)}
-                                      className="flex-1"
-                                    >
-                                      {t("travelPlans.collapse", "Collapse")}
-                                    </Button>
-                                    <Button
-                                      variant="destructive"
-                                      size="sm"
-                                      onClick={() => {
-                                        const ok = window.confirm(
-                                          `Remove "${attraction.name}" from this travel plan?`
-                                        );
-                                        if (ok) {
-                                          removeAttractionFromPlan(
-                                            plan.id,
-                                            attraction.id
-                                          );
-                                        }
-                                      }}
-                                      className="flex-1 gap-2"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                      {t("travelPlans.remove", "Remove")}
-                                    </Button>
-                                  </div>
-                                </div>
-                              </motion.div>
+                                    {/* Price */}
+                                    {attraction.price !== undefined && (
+                                      <div className="flex items-start gap-3 pt-2 border-t border-gray-100">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 shrink-0">
+                                          <Clock className="h-4 w-4 text-amber-600" />
+                                        </div>
+                                        <div>
+                                          <p className="text-xs font-medium text-gray-500 uppercase">
+                                            {t("travelPlans.entryFee", "Entry Fee")}
+                                          </p>
+                                          <p className="text-sm font-semibold text-gray-900 mt-1">
+                                            {attraction.isFreeEntry
+                                              ? "Free"
+                                              : `${attraction.price.toLocaleString()} LAK`}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
 
-                              {/* Vertical line connector - only show if not last item */}
-                              {index < planAttractions.length - 1 && (
-                                <div className="absolute left-5 top-16 h-8 w-0.5 bg-gradient-to-b from-teal-200 to-transparent" />
-                              )}
-                            </div>
-                          </motion.div>
-                        );
-                      })}
+                                    {/* Facilities */}
+                                    {attraction.facilities &&
+                                      attraction.facilities.length > 0 && (
+                                        <div className="flex items-start gap-3 pt-2 border-t border-gray-100">
+
+                                          <div className="flex-1">
+                                            <p className="text-xs font-medium text-gray-500 uppercase">
+                                              {t("travelPlans.facilities", "Facilities")}
+                                            </p>
+                                            <div className="flex flex-wrap gap-1.5 mt-2">
+                                              {attraction.facilities
+                                                .slice(0, 5)
+                                                .map((facility: string) => (
+                                                  <Badge
+                                                    key={facility}
+                                                    className="bg-blue-50 text-blue-700 border-blue-100 text-xs"
+                                                  >
+                                                    {facility}
+                                                  </Badge>
+                                                ))}
+                                              {attraction.facilities.length >
+                                                5 && (
+                                                  <Badge className="bg-gray-100 text-gray-700 text-xs">
+                                                    +
+                                                    {attraction.facilities.length -
+                                                      5}
+                                                  </Badge>
+                                                )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-2 pt-4 border-t border-gray-100">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => toggleStopExpand(attraction.id)}
+                                        className="flex-1"
+                                      >
+                                        {t("travelPlans.collapse", "Collapse")}
+                                      </Button>
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => {
+                                          const ok = window.confirm(
+                                            `Remove "${attraction.name}" from this travel plan?`
+                                          );
+                                          if (ok) {
+                                            removeAttractionFromPlan(
+                                              plan.id,
+                                              attraction.id
+                                            );
+                                          }
+                                        }}
+                                        className="flex-1 gap-2"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        {t("travelPlans.remove", "Remove")}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </motion.div>
+
+                                {/* Vertical line connector - only show if not last item */}
+                                {index < planAttractions.length - 1 && (
+                                  <div className="absolute left-5 top-16 h-8 w-0.5 bg-gradient-to-b from-teal-200 to-transparent" />
+                                )}
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <MapPin className="h-10 w-10 text-teal-300 mb-3" />
-                    <p className="text-sm text-gray-600 font-medium">
-                      {t(
-                        "travelPlans.noAttractionsInPlan",
-                        "No attractions in this plan yet"
-                      )}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {t(
-                        "travelPlans.addAttractionsBelow",
-                        "Add attractions from the list below"
-                      )}
-                    </p>
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <MapPin className="h-10 w-10 text-teal-300 mb-3" />
+                      <p className="text-sm text-gray-600 font-medium">
+                        {t(
+                          "travelPlans.noAttractionsInPlan",
+                          "No attractions in this plan yet"
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {t(
+                          "travelPlans.addAttractionsBelow",
+                          "Add attractions from the list below"
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -1112,15 +1111,14 @@ const formatTimeEstimate = (totalMinutes: number) => {
                         layout
                         key={attraction.id}
                         whileHover={{ scale: 1.01 }}
-                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer group ${
-                          isFav
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer group ${isFav
                             ? "bg-amber-50/50 border-amber-100 hover:border-amber-200"
                             : "bg-gray-50 border-gray-100 hover:border-teal-200 hover:bg-teal-50/30"
-                        }`}
+                          }`}
                       >
                         <div className="relative shrink-0 h-12 w-12 rounded-lg overflow-hidden">
                           <Image
-                            src={baseURLImage+attraction.images[0]}
+                            src={baseURLImage + attraction.images[0]}
                             alt={attraction.name}
                             fill
                             className="object-cover"
@@ -1153,11 +1151,10 @@ const formatTimeEstimate = (totalMinutes: number) => {
                               addAttractionToPlan(plan.id, attraction.id);
                             }
                           }}
-                          className={`shrink-0 h-8 w-8 rounded-full shadow-sm transition-colors ${
-                            isFav
+                          className={`shrink-0 h-8 w-8 rounded-full shadow-sm transition-colors ${isFav
                               ? "bg-amber-500 hover:bg-amber-600 text-white"
                               : "bg-teal-600 hover:bg-teal-700 text-white"
-                          }`}
+                            }`}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>

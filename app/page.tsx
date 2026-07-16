@@ -53,17 +53,18 @@ function getSlides(t: (key: string) => string) {
 const R2_IMAGE_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE;
 
 // Format the discount label for a promotion card
-function formatDiscount(promo: { type: string; price: number; adult: number; children: number }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function formatDiscount(promo: { type: string; price: number; adult: number; children: number }, t: any) {
   if (promo.type === 'percentage' && promo.price > 0) {
-    return `${promo.price}% OFF`;
+    return `LAK ${promo.price}% ${t("home.promo.off", "OFF")}`;
   }
   if (promo.type === 'fixed' && promo.price > 0) {
-    return `฿${promo.price.toLocaleString()} OFF`;
+    return `LAK ${promo.price.toLocaleString()} ${t("home.promo.off", "OFF")}`;
   }
   if (promo.adult > 0) {
-    return `Adult ฿${promo.adult.toLocaleString()}`;
+    return `${t("home.promo.adultLabel", "Adult")} ${promo.adult.toLocaleString()}`;
   }
-  return 'Special Deal';
+  return t("home.promo.specialDeal", "Special Deal");
 }
 
 // Returns days remaining until d_end; null if no end date
@@ -71,6 +72,24 @@ function daysRemaining(dEnd: string | null): number | null {
   if (!dEnd) return null;
   const diff = Math.ceil((new Date(dEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   return diff > 0 ? diff : 0;
+}
+
+function isPromotionVisible(promo: { isActive?: boolean; dStart?: string | null; dEnd?: string | null }) {
+  if (promo.isActive === false) return false;
+
+  const now = new Date();
+  const start = promo.dStart ? new Date(promo.dStart) : null;
+  const end = promo.dEnd ? new Date(promo.dEnd) : null;
+
+  if (start && !Number.isNaN(start.getTime()) && start > now) return false;
+
+  if (end && !Number.isNaN(end.getTime())) {
+    const endOfDay = new Date(end);
+    endOfDay.setHours(23, 59, 59, 999);
+    if (endOfDay < now) return false;
+  }
+
+  return true;
 }
 
 export default function Home() {
@@ -94,6 +113,11 @@ export default function Home() {
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  const visiblePromotions = useMemo(
+    () => promotions.filter(isPromotionVisible),
+    [promotions]
+  );
 
   // Build slide data from i18n
   const slides = useMemo(() => getSlides(t), [t, i18n.language]);
@@ -282,7 +306,9 @@ export default function Home() {
                     <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 text-teal-600 transition-all duration-300 group-hover:from-teal-500 group-hover:to-emerald-600 group-hover:text-white group-hover:shadow-md group-hover:shadow-teal-500/30">
                       <IconComponent className="h-7 w-7" />
                     </div>
-                    <span className="text-sm font-semibold text-gray-800">{category.name_en}</span>
+                    <span className="text-sm font-semibold text-gray-800">
+                      {i18n.language?.startsWith("la") ? category.name_la || category.name_en : category.name_en || category.name_la}
+                    </span>
                   </Link>
                 </motion.div>
               );
@@ -526,7 +552,7 @@ export default function Home() {
           >
             <div>
               <span className="mb-3 inline-block rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-rose-500">
-                Limited Time
+                {t("home.promo.limitedTime", "Limited Time")}
               </span>
               <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
                 {t("home.promotions.title", "Deals & Promotions")}
@@ -567,13 +593,13 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          ) : promotions.length > 0 ? (
+          ) : visiblePromotions.length > 0 ? (
             <div
               id="promos-scroll"
               className="flex gap-5 overflow-x-auto scroll-smooth pb-4 scrollbar-hide"
               style={{ scrollSnapType: 'x mandatory' }}
             >
-              {promotions.map((promo, index) => {
+              {visiblePromotions.map((promo, index) => {
                 const days = daysRemaining(promo.dEnd);
                 const coverImage = promo.image
                   ? R2_IMAGE_URL + promo.image
@@ -581,6 +607,7 @@ export default function Home() {
                     ? R2_IMAGE_URL + promo.thumbnailImage
                     : 'https://images.pexels.com/photos/2166553/pexels-photo-2166553.jpeg?auto=compress&cs=tinysrgb&w=800';
 
+                   
                 return (
                   <motion.div
                     key={promo.promotionId}
@@ -610,14 +637,14 @@ export default function Home() {
                             ? <Percent className="h-3 w-3" />
                             : <Ticket className="h-3 w-3" />
                           }
-                          {formatDiscount(promo)}
+                          {formatDiscount(promo, t)}
                         </div>
 
                         {/* Urgency badge — top-right */}
                         {days !== null && days <= 7 && (
                           <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white shadow-md">
                             <Clock className="h-3 w-3" />
-                            {days === 0 ? 'Last day!' : `${days}d left`}
+                            {days === 0 ? t("home.promo.lastDay", "Last day!") : `${days}${t("home.promo.daysLeft", "d left")}`}
                           </div>
                         )}
 
@@ -638,22 +665,24 @@ export default function Home() {
                         </h3>
 
                         {/* Price row */}
-                        <div className="mb-3 flex items-center gap-3">
+                        <div className="mb-3  gap-3">
                           {promo.adult > 0 && (
                             <div className="flex items-center gap-1 text-sm text-gray-700">
                               <Users className="h-3.5 w-3.5 text-gray-400" />
-                              <span className="font-semibold text-gray-900">
-                                ${promo.adult.toLocaleString()}
+                              <span className="font-semibold text-gray-500">
+                                LAK {promo.adult.toLocaleString()}
                               </span>
-                              <span className="text-gray-400 text-xs">/adult</span>
+                              <span className="text-gray-400 text-xs">{t("home.promo.perAdult", "/adult")}</span>
                             </div>
                           )}
                           {promo.children > 0 && (
                             <div className="flex items-center gap-1 text-sm text-gray-700">
-                              <span className="text-gray-400 text-xs">Child</span>
-                              <span className="font-semibold text-gray-900">
-                                ${promo.children.toLocaleString()}
+                              <Users className="h-3.5 w-3.5 text-gray-400" />
+
+                              <span className="font-semibold text-gray-500">
+                                LAK {promo.children.toLocaleString()}
                               </span>
+                              <span className="text-gray-400 text-xs">{t("home.promo.childLabel", "/Child")}</span>
                             </div>
                           )}
                         </div>
@@ -669,7 +698,7 @@ export default function Home() {
                           {promo.dEnd && (
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3 flex-shrink-0" />
-                              Until {new Date(promo.dEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                              {t("home.promo.until", "Until")} {new Date(promo.dEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                             </span>
                           )}
                         </div>
@@ -677,7 +706,7 @@ export default function Home() {
 
                       {/* Hover CTA bar */}
                       <div className="flex items-center justify-center gap-1.5 bg-rose-500 py-2.5 text-sm font-semibold text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                        View Deal <ArrowRight className="h-4 w-4" />
+                        {t("home.promo.viewDeal", "View Deal")} <ArrowRight className="h-4 w-4" />
                       </div>
                     </Link>
                   </motion.div>
@@ -690,13 +719,13 @@ export default function Home() {
               <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-rose-50">
                 <Ticket className="h-7 w-7 text-rose-400" />
               </div>
-              <p className="text-base font-semibold text-gray-700">No active promotions right now</p>
-              <p className="mt-1 text-sm text-gray-400">Check back soon for deals and discounts.</p>
+              <p className="text-base font-semibold text-gray-700">{t("home.promo.noActive", "No active promotions right now")}</p>
+              <p className="mt-1 text-sm text-gray-400">{t("home.promo.checkBack", "Check back soon for deals and discounts.")}</p>
             </div>
           )}
 
           {/* Mobile scroll controls */}
-          {promotions.length > 0 && (
+          {visiblePromotions.length > 0 && (
             <div className="mt-6 flex items-center justify-between sm:hidden">
               <div className="flex items-center gap-2">
                 <button

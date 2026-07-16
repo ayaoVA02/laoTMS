@@ -505,7 +505,12 @@ export default function EditAttractionPage() {
           setPickOnMap(true);
           handleChange("latitude", coords.lat);
           handleChange("longitude", coords.lng);
-          if (address) handleChange("location", address);
+          if (address) {
+            handleChange("province", address.province || "");
+            handleChange("district", address.district || "");
+            handleChange("village", address.village || "");
+            handleChange("location", address.fullAddress || address.displayName || "");
+          }
         }}
       />
     </DashboardLayout>

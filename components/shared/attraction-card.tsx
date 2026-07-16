@@ -17,7 +17,7 @@ export default function AttractionCard({
   attraction,
   index = 0,
 }: AttractionCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { favorites, toggleFavorite } = useAttractionStore();
   const isFavorite = favorites?.includes(attraction.id) ?? false;
 
@@ -111,7 +111,7 @@ export default function AttractionCard({
 
             {/* Name on Gradient */}
             <h3 className="absolute bottom-3 left-3 right-3 text-lg font-bold text-white drop-shadow-md line-clamp-2">
-              {attraction.name}
+               {i18n.language?.startsWith("la") ? attraction.nameLa || attraction.nameEn : attraction.nameEn || attraction.nameLa}
             </h3>
           </div>
 
