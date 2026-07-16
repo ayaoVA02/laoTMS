@@ -1,6 +1,7 @@
 "use client";
 
 import { Globe, Share2, Loader2, Sparkles, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -44,9 +45,11 @@ export function SettingsSection({
   selectAllSocialImages,
   clearSocialImages,
 }: SettingsSectionProps) {
+  const { t } = useTranslation();
+
   return (
     <Section
-      title="Settings"
+      title={t("dashboard.createForm.settings.title", "Settings")}
       icon={<Globe className="w-4 h-4" />}
       defaultOpen={false}
     >
@@ -55,9 +58,9 @@ export function SettingsSection({
         <div className="flex items-center gap-3">
           <Share2 className="w-4 h-4 text-teal-500 shrink-0" />
           <div>
-            <p className="text-sm font-medium">Social Sharing</p>
+            <p className="text-sm font-medium">{t("dashboard.createForm.settings.socialSharing", "Social Sharing")}</p>
             <p className="text-xs text-muted-foreground">
-              Allow visitors to share this attraction
+              {t("dashboard.createForm.settings.socialSharingHint", "Allow visitors to share this attraction")}
             </p>
           </div>
         </div>
@@ -68,7 +71,7 @@ export function SettingsSection({
         <div className="mt-4 space-y-4">
           {/* Platform checkboxes */}
           <div className="p-3 rounded-xl border bg-card">
-            <p className="text-sm font-semibold mb-2">Post to</p>
+            <p className="text-sm font-semibold mb-2">{t("dashboard.createForm.settings.postTo", "Post to")}</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <label className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 border cursor-pointer">
                 <Checkbox
@@ -95,7 +98,7 @@ export function SettingsSection({
               </label>
             </div>
             <p className="text-[11px] text-muted-foreground mt-2">
-              This only saves a social draft. Actual posting will be added later.
+              {t("dashboard.createForm.settings.postHint", "This only saves a social draft. Actual posting will be added later.")}
             </p>
           </div>
 
@@ -103,9 +106,9 @@ export function SettingsSection({
           <div className="p-3 rounded-xl border bg-card space-y-3">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold">Social caption</p>
+                <p className="text-sm font-semibold">{t("dashboard.createForm.settings.socialCaption", "Social caption")}</p>
                 <p className="text-[11px] text-muted-foreground">
-                  Write your own, or generate with AI.
+                  {t("dashboard.createForm.settings.socialCaptionHint", "Write your own, or generate with AI.")}
                 </p>
               </div>
               <Button
@@ -121,11 +124,11 @@ export function SettingsSection({
                 ) : (
                   <Sparkles className="w-4 h-4 mr-2" />
                 )}
-                Generate AI
+                {t("dashboard.createForm.settings.generateAI", "Generate AI")}
               </Button>
             </div>
             <Textarea
-              placeholder="Short, interesting caption for social media..."
+              placeholder={t("dashboard.createForm.settings.socialCaptionPlaceholder", "Short, interesting caption for social media...")}
               value={socialCaption}
               onChange={(e) => setSocialCaption(e.target.value)}
               className="min-h-[110px] resize-none"
@@ -136,9 +139,9 @@ export function SettingsSection({
           <div className="p-3 rounded-xl border bg-card">
             <div className="flex items-center justify-between gap-2 mb-2">
               <div>
-                <p className="text-sm font-semibold">Social images</p>
+                <p className="text-sm font-semibold">{t("dashboard.createForm.settings.socialImages", "Social images")}</p>
                 <p className="text-[11px] text-muted-foreground">
-                  Pick from the photos you already selected (no re-upload).
+                  {t("dashboard.createForm.settings.socialImagesHint", "Pick from the photos you already selected (no re-upload).")}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -149,7 +152,7 @@ export function SettingsSection({
                   className="h-8 px-2"
                   onClick={selectCoverSocialImage}
                 >
-                  Use cover
+                  {t("dashboard.createForm.settings.useCover", "Use cover")}
                 </Button>
                 <Button
                   type="button"
@@ -158,7 +161,7 @@ export function SettingsSection({
                   className="h-8 px-2"
                   onClick={selectAllSocialImages}
                 >
-                  Select all
+                  {t("dashboard.createForm.settings.selectAll", "Select all")}
                 </Button>
                 <Button
                   type="button"
@@ -167,14 +170,14 @@ export function SettingsSection({
                   className="h-8 px-2"
                   onClick={clearSocialImages}
                 >
-                  Clear
+                  {t("dashboard.createForm.settings.clear", "Clear")}
                 </Button>
               </div>
             </div>
 
             {images.length === 0 ? (
               <div className="p-4 rounded-xl bg-muted/40 border border-dashed text-center text-xs text-muted-foreground">
-                Add photos in the Photos & Videos section first.
+                {t("dashboard.createForm.settings.noPhotosHint", "Add photos in the Photos & Videos section first.")}
               </div>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
@@ -216,7 +219,7 @@ export function SettingsSection({
             )}
 
             <p className="text-[11px] text-muted-foreground mt-2">
-              Selected: {socialImageIds.size}
+              {t("dashboard.createForm.settings.selected", "Selected")}: {socialImageIds.size}
             </p>
           </div>
         </div>

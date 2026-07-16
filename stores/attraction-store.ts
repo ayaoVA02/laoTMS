@@ -229,6 +229,7 @@ export const useAttractionStore = create<AttractionState>((set, get) => ({
         .from('attractions')
         .select('*')
         .eq('status', 'approved')
+        .eq('is_active', true)
         .eq('expired', false)
         .order('created_at', { ascending: false });
       if (error) { set({ loading: false }); return; }

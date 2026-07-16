@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, X, Loader2, Eye, Check, Video, Image as ImageIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Section } from "@/components/ui/section";
 import type { ImageItem, VideoItem } from "../../data/attractions";
 
@@ -31,17 +32,19 @@ export function MediaSection({
   setThumbnail,
   setVideos,
 }: MediaSectionProps) {
+  const { t } = useTranslation();
+
   return (
-    <Section title="Photos & Videos" icon={<ImageIcon className="w-4 h-4" />}>
+    <Section title={t("dashboard.createForm.media.title", "Photos & Videos")} icon={<ImageIcon className="w-4 h-4" />}>
       <div className="space-y-5">
         {/* ── Photos ── */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-semibold">
-              Photos <span className="text-red-500">*</span>
+              {t("dashboard.createForm.media.photos", "Photos")} <span className="text-red-500">*</span>
             </p>
             {errors.has("images") && (
-              <span className="text-xs text-red-500">At least 1 photo required</span>
+              <span className="text-xs text-red-500">{t("dashboard.createForm.media.photoRequired", "At least 1 photo required")}</span>
             )}
           </div>
 
@@ -60,10 +63,10 @@ export function MediaSection({
           >
             <Upload className="w-7 h-7 text-muted-foreground mb-1.5" />
             <p className="text-sm text-muted-foreground font-medium">
-              Drop photos here or click to browse
+              {t("dashboard.createForm.media.dropPhotos", "Drop photos here or click to browse")}
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
-              PNG, JPG, WEBP · Select multiple
+              {t("dashboard.createForm.media.photoFormats", "PNG, JPG, WEBP · Select multiple")}
             </p>
             <input
               ref={fileInputRef}
@@ -141,8 +144,7 @@ export function MediaSection({
                 </AnimatePresence>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                {images.length} photo{images.length !== 1 ? "s" : ""} · Hover → 👁 set
-                cover · ✕ remove
+                {images.length} {t("dashboard.createForm.media.photoCount", "photo")}{images.length !== 1 ? t("dashboard.createForm.media.photoPlural", "s") : ""} · {t("dashboard.createForm.media.photoHint", "Hover → 👁 set cover · ✕ remove")}
               </p>
             </>
           )}
@@ -151,8 +153,8 @@ export function MediaSection({
         {/* ── Videos ── */}
         <div className="border-t pt-4">
           <p className="text-sm font-semibold mb-2">
-            Videos{" "}
-            <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+            {t("dashboard.createForm.media.videos", "Videos")} {" "}
+            <span className="text-muted-foreground text-xs font-normal">({t("dashboard.createForm.media.optional", "optional")})</span>
           </p>
 
           <div
@@ -166,10 +168,10 @@ export function MediaSection({
           >
             <Video className="w-7 h-7 text-muted-foreground mb-1.5" />
             <p className="text-sm text-muted-foreground font-medium">
-              Drop videos or click to browse
+              {t("dashboard.createForm.media.dropVideos", "Drop videos or click to browse")}
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
-              MP4, WebM · Select multiple
+              {t("dashboard.createForm.media.videoFormats", "MP4, WebM · Select multiple")}
             </p>
             <input
               ref={videoInputRef}

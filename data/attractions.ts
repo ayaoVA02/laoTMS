@@ -17,6 +17,7 @@ export interface Attraction {
   has_accommodation: boolean;
   has_internet: boolean;
   is_free_entry: boolean;
+  is_active: boolean;
   entry_fee_foreigner: number;
   open_time: string;
   close_time: string;
@@ -67,5 +68,5 @@ export interface VideoItem {
 export interface AttractionType {
   type_id: string;
   name_en: string;
+  name_la: string;
 }
-

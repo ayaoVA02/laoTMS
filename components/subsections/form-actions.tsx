@@ -1,4 +1,5 @@
 import { Loader2, Save, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
 interface FormActionsProps {
@@ -9,6 +10,8 @@ interface FormActionsProps {
 }
 
 export function FormActions({ saving, allUploaded, onDraft, onSubmit }: FormActionsProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-3 pt-2">
       <div className="flex flex-col sm:flex-row justify-end gap-3">
@@ -24,7 +27,7 @@ export function FormActions({ saving, allUploaded, onDraft, onSubmit }: FormActi
           ) : (
             <Save className="w-4 h-4 mr-2" />
           )}
-          Save as Draft
+          {t("dashboard.createForm.actions.saveDraft", "Save as Draft")}
         </Button>
         <Button
           type="button"
@@ -37,13 +40,13 @@ export function FormActions({ saving, allUploaded, onDraft, onSubmit }: FormActi
           ) : (
             <Plus className="w-4 h-4 mr-2" />
           )}
-          Submit for Review
+          {t("dashboard.createForm.actions.submitReview", "Submit for Review")}
         </Button>
       </div>
 
       {!allUploaded && (
         <p className="text-center text-xs text-amber-500 flex items-center justify-center gap-1.5">
-          <Loader2 className="w-3 h-3 animate-spin" /> Still uploading, please wait...
+          <Loader2 className="w-3 h-3 animate-spin" /> {t("dashboard.createForm.actions.uploading", "Still uploading, please wait...")}
         </p>
       )}
     </div>

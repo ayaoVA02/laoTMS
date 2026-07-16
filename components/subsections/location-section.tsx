@@ -2,19 +2,13 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Section } from "@/components/ui/section";
 import { Field } from "@/components/ui/field";
-import { PROVINCES } from "../../data/attractions";
+import provincesData from "@/laos_provinces_districts.json";
 
 interface LocationSectionProps {
   pickOnMap: boolean;
@@ -44,61 +38,92 @@ export function LocationSection({
   longitude, setLongitude,
   setMapOpen,
 }: LocationSectionProps) {
+  const { t, i18n } = useTranslation();
+  const isLao = i18n.language === "la";
+  const provinces = provincesData[0].provinces;
+
+  // Find province by either Lao or English name
+  const findProvinceByValue = (val: string) =>
+    provinces.find((p) => p.province_en === val || p.province_la === val);
+
+  // Find districts for the currently selected province (match by either Lao or English)
+  const selectedProvince = findProvinceByValue(province);
+
+  // Get display values (show Lao when isLao, English otherwise)
+  const displayProvince = selectedProvince
+    ? (isLao ? selectedProvince.province_la : selectedProvince.province_en)
+    : "";
+
+  const displayDistrict = (() => {
+    if (!selectedProvince) return district;
+    const found = selectedProvince.districts.find(
+      (d) => d.district_en === district || d.district_la === district
+    );
+    return found ? (isLao ? found.district_la : found.district_en) : district;
+  })();
+
   return (
-    <Section title="Location" icon={<MapPin className="w-4 h-4" />}>
+    <Section title={t("dashboard.locationSection.title", "Location")} icon={<MapPin className="w-4 h-4" />}>
       <div className="space-y-4">
         {/* Map toggle */}
         <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
           <div className="flex items-center gap-3">
             <MapPin className="w-4 h-4 text-teal-500 shrink-0" />
             <div>
-              <p className="text-sm font-medium">Pick address on map</p>
+              <p className="text-sm font-medium">{t("dashboard.locationSection.pickOnMap", "Pick address on map")}</p>
               <p className="text-xs text-muted-foreground">
-                Hide province/district/village and use map selection
+                {t("dashboard.locationSection.pickOnMapHint", "Use map to get coordinates, province/district will be auto-filled")}
               </p>
             </div>
           </div>
           <Switch checked={pickOnMap} onCheckedChange={setPickOnMap} />
         </div>
 
-        {/* Province / District / Village */}
-        {!pickOnMap && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Province">
-              <Select value={province} onValueChange={setProvince}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {PROVINCES.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="District">
-              <Input
-                placeholder="District"
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-              />
-            </Field>
-            <Field label="Village">
-              <Input
-                placeholder="Village"
-                value={village}
-                onChange={(e) => setVillage(e.target.value)}
-              />
-            </Field>
+        {/* Province / District / Village – filled automatically via Pick on Map */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Field label={t("dashboard.locationSection.province", "Province")}>
+            <div className="flex h-10 w-full items-center rounded-lg border border-input bg-muted/40 px-3 text-sm text-muted-foreground">
+              {displayProvince || (
+                <span className="italic">
+                  {t("dashboard.locationSection.useMapHint", "Pick on map →")}
+                </span>
+              )}
+            </div>
+          </Field>
+          <Field label={t("dashboard.locationSection.district", "District")}>
+            <div className="flex h-10 w-full items-center rounded-lg border border-input bg-muted/40 px-3 text-sm text-muted-foreground">
+              {displayDistrict || (
+                <span className="italic">
+                  {t("dashboard.locationSection.useMapHint", "Pick on map →")}
+                </span>
+              )}
+            </div>
+          </Field>
+          <Field label={t("dashboard.locationSection.village", "Village")}>
+            <div className="flex h-10 w-full items-center rounded-lg border border-input bg-muted/40 px-3 text-sm text-muted-foreground">
+              {village || (
+                <span className="italic">
+                  {t("dashboard.locationSection.useMapHint", "Pick on map →")}
+                </span>
+              )}
+            </div>
+          </Field>
+        </div>
+
+        {/* Show a summary when using map picker */}
+        {pickOnMap && (province || district || village) && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-teal-500/8 border border-teal-500/20 text-xs">
+            <MapPin className="w-3.5 h-3.5 text-teal-500 shrink-0" />
+            <span className="text-teal-700 dark:text-teal-300">
+              {[village, district, province].filter(Boolean).join(", ")}
+            </span>
           </div>
         )}
 
         {/* Address */}
-        <Field label="Address / Directions">
+        <Field label={t("dashboard.locationSection.address", "Address / Directions")}>
           <Input
-            placeholder="Detailed address or landmark"
+            placeholder={t("dashboard.locationSection.addressPlaceholder", "Detailed address or landmark")}
             value={location}
             onChange={(e) => setLocation(e.target.value)}
           />
@@ -107,17 +132,14 @@ export function LocationSection({
         {/* Coordinates */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Coordinates</Label>
+            <Label className="text-sm font-medium">{t("dashboard.locationSection.coordinates", "Coordinates")}</Label>
             <button
               type="button"
-              onClick={() => {
-                setPickOnMap(true);
-                setMapOpen(true);
-              }}
+              onClick={() => setMapOpen(true)}
               className="flex items-center gap-1.5 text-xs font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-500 transition-colors px-3 py-1.5 rounded-lg border border-teal-500/30 hover:bg-teal-500/5"
             >
               <MapPin className="w-3.5 h-3.5" />
-              Pick on Map
+              {t("dashboard.locationSection.pickOnMapButton", "Pick on Map")}
             </button>
           </div>
 
@@ -149,20 +171,20 @@ export function LocationSection({
           </AnimatePresence>
 
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Latitude">
+            <Field label={t("dashboard.locationSection.latitude", "Latitude")}>
               <Input
                 type="number"
                 step="any"
-                placeholder="e.g. 17.9667"
+                placeholder={t("dashboard.locationSection.latitudePlaceholder", "e.g. 17.9667")}
                 value={latitude}
                 onChange={(e) => setLatitude(e.target.value)}
               />
             </Field>
-            <Field label="Longitude">
+            <Field label={t("dashboard.locationSection.longitude", "Longitude")}>
               <Input
                 type="number"
                 step="any"
-                placeholder="e.g. 102.6133"
+                placeholder={t("dashboard.locationSection.longitudePlaceholder", "e.g. 102.6133")}
                 value={longitude}
                 onChange={(e) => setLongitude(e.target.value)}
               />
@@ -171,9 +193,9 @@ export function LocationSection({
 
           {!latitude && !longitude && (
             <p className="text-xs text-muted-foreground">
-              Enter manually or click{" "}
-              <span className="text-teal-500 font-medium">Pick on Map</span> to select
-              visually. Internet required for the map.
+              {t("dashboard.locationSection.manualHint", "Enter manually or click")}{" "}
+              <span className="text-teal-500 font-medium">{t("dashboard.locationSection.pickOnMapButton", "Pick on Map")}</span>{" "}
+              {t("dashboard.locationSection.manualHintSuffix", "to select visually. Internet required for the map.")}
             </p>
           )}
         </div>

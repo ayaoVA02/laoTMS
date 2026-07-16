@@ -1,4 +1,5 @@
 import { Check, Car, Wifi, Utensils, BedDouble, DollarSign, Phone } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Section } from "@/components/ui/section";
 import { Field } from "@/components/ui/field";
@@ -36,20 +37,22 @@ export function FacilitiesSection({
   hasAccommodation, setHasAccommodation,
   accPrice, setAccPrice,
 }: FacilitiesSectionProps) {
+  const { t } = useTranslation();
+
   return (
-    <Section title="Facilities & Amenities" icon={<Check className="w-4 h-4" />}>
+    <Section title={t("dashboard.createForm.facilities.title", "Facilities & Amenities")} icon={<Check className="w-4 h-4" />}>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Parking */}
         <FacilityToggle
           icon={<Car className="w-4 h-4" />}
-          label="Parking Available"
+          label={t("dashboard.createForm.facilities.parking", "Parking Available")}
           checked={hasParking}
           onChange={setHasParking}
           subContent={
             <div className="space-y-2">
               <FacilityToggle
                 icon={<Car className="w-3.5 h-3.5" />}
-                label="Free Parking"
+                label={t("dashboard.createForm.facilities.freeParking", "Free Parking")}
                 checked={isFreeParking}
                 onChange={setIsFreeParking}
               />
@@ -58,7 +61,7 @@ export function FacilitiesSection({
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     type="number"
-                    placeholder="Parking price (LAK)"
+                    placeholder={t("dashboard.createForm.facilities.parkingPrice", "Parking price (LAK)")}
                     value={parkingPrice}
                     onChange={(e) => setParkingPrice(e.target.value)}
                     className="pl-9 h-9 text-sm"
@@ -72,7 +75,7 @@ export function FacilitiesSection({
         {/* Internet */}
         <FacilityToggle
           icon={<Wifi className="w-4 h-4" />}
-          label="Internet / WiFi"
+          label={t("dashboard.createForm.facilities.internet", "Internet / WiFi")}
           checked={hasInternet}
           onChange={(v) => {
             setHasInternet(v);
@@ -81,7 +84,7 @@ export function FacilitiesSection({
           subContent={
             <FacilityToggle
               icon={<Wifi className="w-3.5 h-3.5" />}
-              label="Free WiFi"
+              label={t("dashboard.createForm.facilities.freeWifi", "Free WiFi")}
               checked={isFreeWifi}
               onChange={setIsFreeWifi}
             />
@@ -91,11 +94,11 @@ export function FacilitiesSection({
         {/* Guide phone (shown only when no internet) */}
         {!hasInternet && (
           <div className="sm:col-span-2">
-            <Field label="Tour Guide Phone Number">
+            <Field label={t("dashboard.createForm.facilities.guidePhone", "Tour Guide Phone Number")}>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="+856 20 xx xxx xxx"
+                  placeholder={t("dashboard.createForm.facilities.guidePhonePlaceholder", "+856 20 xx xxx xxx")}
                   value={guidePhone}
                   onChange={(e) => setGuidePhone(e.target.value)}
                   className="pl-9"
@@ -108,7 +111,7 @@ export function FacilitiesSection({
         {/* Restaurant */}
         <FacilityToggle
           icon={<Utensils className="w-4 h-4" />}
-          label="Restaurant / Food"
+          label={t("dashboard.createForm.facilities.restaurant", "Restaurant / Food")}
           checked={hasRestaurant}
           onChange={setHasRestaurant}
         />
@@ -116,7 +119,7 @@ export function FacilitiesSection({
         {/* Accommodation */}
         <FacilityToggle
           icon={<BedDouble className="w-4 h-4" />}
-          label="Accommodation"
+          label={t("dashboard.createForm.facilities.accommodation", "Accommodation")}
           checked={hasAccommodation}
           onChange={setHasAccommodation}
           subContent={
@@ -124,7 +127,7 @@ export function FacilitiesSection({
               <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="number"
-                placeholder="Price per night (LAK)"
+                placeholder={t("dashboard.createForm.facilities.accommodationPrice", "Price per night (LAK)")}
                 value={accPrice}
                 onChange={(e) => setAccPrice(e.target.value)}
                 className="pl-9 h-9 text-sm"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2,
   CheckCircle,
@@ -16,9 +16,12 @@ import {
   Tag,
   RefreshCw,
   AlertCircle,
-
   DollarSign,
   Percent,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+  X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@/stores/auth-store";
@@ -31,6 +34,7 @@ import { Switch } from "@/components/ui/switch";
 
 import Image from "next/image";
 import { useRouter } from 'next/navigation';
+import toast from "react-hot-toast";
 const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL_IMAGE || "";
 
 function resolveImage(f?: string | null) {
@@ -99,15 +103,29 @@ export default function EntrepreneurDashboard({
   socialShareStates,
   onToggleSocialShare,
   onDeleteAttraction,
-
 }: EntrepreneurDashboardProps) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
 
-
   const [recentPromotions, setRecentPromotions] = useState<any[]>([]);
   const [loadingPromos, setLoadingPromos] = useState(true);
   const [promoError, setPromoError] = useState<string | null>(null);
+
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<Attraction | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // is_active toggle state (track which attractions are active)
+  const [activeStates, setActiveStates] = useState<Record<string, boolean>>({});
+
+  // Sync activeStates from attractions
+  useEffect(() => {
+    const states: Record<string, boolean> = {};
+    myAttractions.forEach((a) => {
+      states[a.attraction_id] = a.is_active !== false;
+    });
+    setActiveStates((prev) => ({ ...prev, ...states }));
+  }, [myAttractions]);
 
   // Get Top 5 High Rating Attractions
   const topAttractions = useMemo(() => {
@@ -122,7 +140,6 @@ export default function EntrepreneurDashboard({
       .sort((a, b) => (b.rating || 0) - (a.rating || 0))
       .slice(0, 5);
   }, [myAttractions]);
-
 
   useEffect(() => {
     const fetchPromotions = async () => {
@@ -150,12 +167,48 @@ export default function EntrepreneurDashboard({
     fetchPromotions();
   }, [user?.id]);
 
-
-
-
   const router = useRouter();
-
   const thumbnailFor = (a: Attraction) => resolveImage(a.thumbnail_image);
+
+  // Handle delete with confirmation
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      // Set is_active = false instead of actually deleting
+      const { error } = await supabase
+        .from("attractions")
+        .update({ is_active: false })
+        .eq("attraction_id", deleteTarget.attraction_id);
+
+      if (error) throw error;
+
+      toast.success(`"${deleteTarget.name_en}" has been deactivated`);
+      onDeleteAttraction(deleteTarget.attraction_id);
+      setDeleteTarget(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to deactivate attraction");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Handle is_active toggle
+  const handleToggleActive = async (attraction: Attraction, newState: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("attractions")
+        .update({ is_active: newState })
+        .eq("attraction_id", attraction.attraction_id);
+
+      if (error) throw error;
+
+      setActiveStates((prev) => ({ ...prev, [attraction.attraction_id]: newState }));
+      toast.success(newState ? `"${attraction.name_en}" is now visible to public` : `"${attraction.name_en}" is now hidden from public`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update visibility");
+    }
+  };
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 sm:space-y-6">
@@ -235,7 +288,7 @@ export default function EntrepreneurDashboard({
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-muted-foreground hover:text-teal-600"
-                          onClick={() => router.push(`/dashboard/my-attractions/edit/${a.attraction_id}`) /* Navigate to edit page */}
+                          onClick={() => router.push(`/dashboard/my-attractions/edit/${a.attraction_id}`)}
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </Button>
@@ -267,8 +320,9 @@ export default function EntrepreneurDashboard({
             <div className="space-y-3">
               {topAttractions.map((attraction) => {
                 const thumb = thumbnailFor(attraction);
+                const isActive = activeStates[attraction.attraction_id] !== false;
                 return (
-                  <div key={attraction.attraction_id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border bg-card hover:shadow-sm transition-shadow">
+                  <div key={attraction.attraction_id} className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border bg-card hover:shadow-sm transition-shadow ${!isActive ? 'opacity-60' : ''}`}>
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-gradient-to-br from-teal-500/20 to-emerald-500/20 border border-teal-500/20 flex items-center justify-center shrink-0 overflow-hidden">
                         {thumb ? (
@@ -283,6 +337,11 @@ export default function EntrepreneurDashboard({
                           <Badge variant="outline" className={`${statusBadgeMap[attraction.status]?.className || ""} text-[10px]`}>
                             {statusBadgeMap[attraction.status]?.label || attraction.status}
                           </Badge>
+                          {!isActive && (
+                            <Badge variant="outline" className="bg-slate-500/15 text-slate-500 border-slate-500/25 text-[10px]">
+                              Hidden
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {attraction.province}{attraction.district ? `, ${attraction.district}` : ""}
@@ -296,20 +355,36 @@ export default function EntrepreneurDashboard({
                       </div>
                     </div>
                     <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 border-t sm:border-t-0 pt-3 sm:pt-0">
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
-                        <Switch
-                          checked={socialShareStates[attraction.attraction_id] ?? attraction.social_share}
-                          onCheckedChange={() => onToggleSocialShare(attraction.attraction_id)}
-                          className="scale-90 sm:scale-100"
-                        />
+                      <div className="flex items-center gap-1.5 sm:gap-3">
+                        {/* Active toggle */}
+                        <div className="flex items-center gap-1">
+                          {isActive ? (
+                            <Eye className="w-3.5 h-3.5 text-emerald-500" />
+                          ) : (
+                            <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
+                          )}
+                          <Switch
+                            checked={isActive}
+                            onCheckedChange={(checked) => handleToggleActive(attraction, checked)}
+                            className="scale-90 sm:scale-100"
+                          />
+                        </div>
+                        {/* Social share toggle */}
+                        {/* <div className="flex items-center gap-1">
+                          <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
+                          <Switch
+                            checked={socialShareStates[attraction.attraction_id] ?? attraction.social_share}
+                            onCheckedChange={() => onToggleSocialShare(attraction.attraction_id)}
+                            className="scale-90 sm:scale-100"
+                          />
+                        </div> */}
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-teal-600"
-                          onClick={() => router.push(`/dashboard/my-attractions/edit/${attraction.attraction_id}`) /* Navigate to edit page */}
+                          onClick={() => router.push(`/dashboard/my-attractions/edit/${attraction.attraction_id}`)}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -317,7 +392,7 @@ export default function EntrepreneurDashboard({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-red-600"
-                          onClick={() => onDeleteAttraction(attraction.attraction_id)}
+                          onClick={() => setDeleteTarget(attraction)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -423,7 +498,95 @@ export default function EntrepreneurDashboard({
         </Card>
       </motion.div>
 
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => !deleting && setDeleteTarget(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-md rounded-2xl border bg-white p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-red-500/10">
+                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                  </div>
+                  <h3 className="font-semibold text-lg">Deactivate Attraction</h3>
+                </div>
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deleting}
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
+              <p className="text-sm text-muted-foreground mb-2">
+                Do you want to deactivate the following attraction? It will be hidden from public view.
+              </p>
+
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 mb-6">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500/20 to-emerald-500/20 flex items-center justify-center shrink-0 overflow-hidden relative">
+                  {deleteTarget.thumbnail_image ? (
+                    <Image
+                      src={resolveImage(deleteTarget.thumbnail_image)}
+                      alt={deleteTarget.name_en}
+                      fill
+                      sizes="40px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <Building2 className="w-5 h-5 text-teal-500" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">{deleteTarget.name_en}</p>
+                  <p className="text-xs text-muted-foreground">{deleteTarget.province}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deleting}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteConfirm}
+                  disabled={deleting}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {deleting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Deactivating...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Deactivate
+                    </>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
